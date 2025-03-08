@@ -40,17 +40,17 @@ export const insertNewsSchema = createInsertSchema(news, {
   newsImage: (newsImage) => newsImage,
   newsName: (newsName) => newsName,
   newsDescription: (newsDescription) => newsDescription,
-})
-  .required({
-    authorID: true,
-    newsImage: true,
-    newsName: true,
-    newsDescription: true,
-  })
-  .omit({
-    newsID: true,
-    createdAt: true,
-    updatedAt: true,
-  });
+});
 
 export const patchNewsSchema = insertNewsSchema.partial();
+
+export const insertDonationSchema = createInsertSchema(donations, {
+  donationAmount: (donationAmount) => donationAmount,
+  donationDeduction: (donationDeduction) => donationDeduction,
+  donationType: (donationType) => donationType,
+  donaturName: (donaturName) => donaturName,
+  donaturEmail: (donaturEmail) => donaturEmail,
+  donaturMessage: (donaturMessage) => donaturMessage,
+});
+
+export const selectDonationSchema = createSelectSchema(donations);

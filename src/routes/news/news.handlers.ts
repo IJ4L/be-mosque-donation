@@ -4,7 +4,7 @@ import { news } from "../../db/schema.ts";
 import type { AppRouteHandler } from "../../lib/types.ts";
 import type {CreateRoute, GetOneRoute, ListRoute, PatchRoute, RemoveRoute,} from "./news.routes.ts";
 import { eq } from "drizzle-orm";
-import parseFormData from "../util/parse-data.ts";
+import { parseNewsFormData } from "../util/parse-data.ts";
 
 export const list: AppRouteHandler<ListRoute> = async (c) => {
   const newss = await db.select().from(news);
@@ -15,7 +15,7 @@ export const list: AppRouteHandler<ListRoute> = async (c) => {
 };
 
 export const create: AppRouteHandler<CreateRoute> = async (c) => {
-  const newss = await parseFormData(c);
+  const newss = await parseNewsFormData(c);
   if (!newss) {
     return c.json(
       { message: "Invalid request body", data: null },
@@ -49,7 +49,7 @@ export const getOne: AppRouteHandler<GetOneRoute> = async (c) => {
 
 export const patch: AppRouteHandler<PatchRoute> = async (c) => {
   const { id } = c.req.valid("param");
-  const newss = await parseFormData(c);
+  const newss = await parseNewsFormData(c);
 
   if (!newss) {
     return c.json(

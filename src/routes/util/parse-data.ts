@@ -4,15 +4,15 @@ import path from "path";
 const uploadDir = "uploads";
 fs.ensureDirSync(uploadDir);
 
-const parseFormData = async (c: any) => {
+const parseNewsFormData = async (c: any) => {
   const formData = await c.req.formData();
 
   const newsName = formData.get("newsName");
   const newsDescription = formData.get("newsDescription");
   const newsImage = formData.get("newsImage") as File;
-  const authorID = formData.get("authorID");
+  const authorID = 1;
 
-  if (!authorID || !newsName || !newsDescription || !newsImage) {
+  if (!newsName || !newsDescription || !newsImage) {
     return null;
   }
 
@@ -22,10 +22,26 @@ const parseFormData = async (c: any) => {
 
   await fs.writeFile(filePath, Buffer.from(await newsImage.arrayBuffer()));
 
-  const parsedAuthorID = parseInt(authorID, 10);
-  if (isNaN(parsedAuthorID)) return null;
 
-  return { newsName, newsDescription, newsImage: `/images/${uniqueName}`, authorID: parsedAuthorID };
+  return { newsName, newsDescription, newsImage: `/images/${uniqueName}`, authorID: authorID };
 };
 
-export default parseFormData;
+const parseDonationsFormData = async (c: any) => {
+  const formData = await c.req.formData();
+
+  const donationAmount = formData.get("donationAmount") as number;
+  const donationDeduction = formData.get("donationDeduction") as number;
+  const donationType = formData.get("donationType") as string;
+  const donaturName = formData.get("donaturName") as string;
+  const donaturEmail = formData.get("donaturEmail") as string;
+  const donaturMessage = formData.get("donaturMessage") as string;
+
+  if (!donationAmount || !donationDeduction || !donationType || !donaturName) {
+    return null;
+  }
+
+  return { donationAmount, donationDeduction, donationType, donaturName, donaturEmail, donaturMessage };
+}
+
+export { parseNewsFormData };
+export { parseDonationsFormData };

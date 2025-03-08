@@ -19,6 +19,9 @@ const EnvSchema = z
     DATABASE_URL: z.string().default(""),
     LOG_LEVEL: z.string().default("debug"),
     DATABASE_AUTH_TOKEN: z.string().optional(),
+    WABLAS_TOKEN: z.string().default(""),
+    WABLAS_SECRET: z.string().default(""),
+    WABLAS_DOMAIN: z.string().default(""),
   })
   .superRefine((input, ctx) => {
     if (input.NODE_ENV === "production" && !input.DATABASE_AUTH_TOKEN) {
