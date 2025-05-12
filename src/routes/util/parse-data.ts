@@ -5,26 +5,39 @@ const uploadDir = "uploads";
 fs.ensureDirSync(uploadDir);
 
 const parseNewsFormData = async (c: any) => {
-  const formData = await c.req.formData();
+    const formData = await c.req.formData();
+  
+    const newsName = formData.get("newsName");
+    const newsDescription = formData.get("newsDescription");
+    const rawNewsImage = formData.get("newsImage");
+  
+    const authorID = 1;
+  
+    if (!newsName || !newsDescription || !rawNewsImage) {
+      return null;
+    }
+  
+    let imagePath: string;
+  
+    if (typeof rawNewsImage === "object" && rawNewsImage instanceof File) {
+      const ext = path.extname(rawNewsImage.name);
+      const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+      const filePath = path.join(uploadDir, uniqueName);
+  
+      await fs.writeFile(filePath, Buffer.from(await rawNewsImage.arrayBuffer()));
+  
+      imagePath = `/images/${uniqueName}`;
+    } 
 
-  const newsName = formData.get("newsName");
-  const newsDescription = formData.get("newsDescription");
-  const newsImage = formData.get("newsImage") as File;
-  const authorID = 1;
-
-  if (!newsName || !newsDescription || !newsImage) {
-    return null;
-  }
-
-  const ext = path.extname(newsImage.name);
-  const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-  const filePath = path.join(uploadDir, uniqueName);
-
-  await fs.writeFile(filePath, Buffer.from(await newsImage.arrayBuffer()));
-
-
-  return { newsName, newsDescription, newsImage: `/images/${uniqueName}`, authorID: authorID };
-};
+    else if (typeof rawNewsImage === "string") {
+      imagePath = rawNewsImage;
+    } 
+    else {
+      return null;
+    }
+  
+    return { newsName, newsDescription, newsImage: imagePath, authorID };
+  };
 
 const parseDonationsFormData = async (c: any) => {
   const formData = await c.req.formData();
