@@ -15,8 +15,14 @@ export const list = createRoute({
       z.object({
         message: z.string(),
         data: z.array(selectNewsSchema),
+        pagination: z.object({
+          total: z.number(),
+          page: z.number(),
+          limit: z.number(),
+          totalPages: z.number(),
+        }),
       }),
-      "The list of news"
+      "The list of news with pagination"
     ),
   },
 });

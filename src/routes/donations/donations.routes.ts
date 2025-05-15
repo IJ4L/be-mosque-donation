@@ -10,7 +10,10 @@ export const create = createRoute({
         [HttpStatusCodes.OK]: jsonContent(
             z.object({
                 message: z.string(),
-                data: selectDonationSchema,
+                data: z.object({
+                    token: z.string(),
+                    redirect: z.string(),
+                }),
             })    
         , "Donation created"),
         [HttpStatusCodes.BAD_REQUEST]: jsonContent(
@@ -28,18 +31,86 @@ export const create = createRoute({
     }
 });
 
-export const get = createRoute({
-    method: "get",
-    path: "/donations",
+export const callback = createRoute({
+    method: "post",
+    path: "/donations/notification",
     responses: {
         [HttpStatusCodes.OK]: jsonContent(
             z.object({
                 message: z.string(),
-                data: z.array(selectDonationSchema),
+                data: z.object({
+                    order_id: z.string(),
+                    transaction_status: z.string(),
+                    fraud_status: z.string(),
+                    status_code: z.string(),
+                    status_message: z.string(),
+                }),
+            })    
+        , "Callback received"),
+        [HttpStatusCodes.BAD_REQUEST]: jsonContent(
+            z.object({
+                message: z.string(),
+                data: z.null(),
+            })
+        , "Invalid callback"),
+        [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
+            z.object({
+                message: z.string(),
+                data: z.null(),
+            })
+        , "Error processing callback"),
+    }
+});
+
+export const get = createRoute({
+    method: "get",
+    path: "/donations",
+    request: {
+        query: z.object({
+            page: z.coerce.number().int().positive().default(1),
+            limit: z.coerce.number().int().positive().default(10)
+        })
+    },
+    responses: {
+        [HttpStatusCodes.OK]: jsonContent(
+            z.object({
+                message: z.string(),
+                data: z.object({
+                    donations: z.array(selectDonationSchema),
+                    pagination: z.object({
+                        total: z.number(),
+                        page: z.number(),
+                        limit: z.number(),
+                        totalPages: z.number()
+                    })
+                }),
             })    
         , "Donations retrieved"),
     }
 })
 
+export const excel = createRoute({
+    method: "get",
+    path: "/donations/excel",
+    responses: {
+        [HttpStatusCodes.OK]: {
+            description: "Excel file with all donations",
+            content: {
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                    schema: { type: "string", format: "binary" }
+                }
+            }
+        },
+        [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
+            z.object({
+                message: z.string(),
+                data: z.null(),
+            })
+        , "Error generating Excel file"),
+    }
+});
+
 export type CreateRoute = typeof create;
 export type GetRoute = typeof get;
+export type CallbackRoute = typeof callback;
+export type ExcelRoute = typeof excel;

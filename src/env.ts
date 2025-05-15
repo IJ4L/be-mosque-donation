@@ -22,6 +22,10 @@ const EnvSchema = z
     WABLAS_TOKEN: z.string().default(""),
     WABLAS_SECRET: z.string().default(""),
     WABLAS_DOMAIN: z.string().default(""),
+    MIDTRANS_SERVER_KEY: z.string().default(""),
+    MIDTRANS_CLIENT_KEY: z.string().default(""),
+    MIDTRANS_MERCHANT_ID: z.string().default(""),
+    MIDTRANS_IS_PRODUCTION: z.string().default("false"),
   })
   .superRefine((input, ctx) => {
     if (input.NODE_ENV === "production" && !input.DATABASE_AUTH_TOKEN) {

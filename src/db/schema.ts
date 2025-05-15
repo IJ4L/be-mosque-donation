@@ -1,5 +1,6 @@
 import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { string } from "zod";
 
 export const users = pgTable("users", {
   userID: serial("user_id").primaryKey(),
@@ -11,7 +12,7 @@ export const users = pgTable("users", {
 
 export const donations = pgTable("donations", {
   donationID: serial("donation_id").primaryKey(),
-  donationAmount: integer("donation_amount").notNull(),
+  donationAmount: text("donation_amount").notNull(),
   donationDeduction: integer("donation_deduction").notNull(),
   donationType: text("donation_type").notNull(),
   donaturName: text("donatur_name").notNull(),
@@ -32,6 +33,25 @@ export const news = pgTable("news", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const mutations = pgTable("mutations", {
+  mutationID: serial("mutation_id").primaryKey(),
+  mutationType: text("mutation_type").notNull(),
+  mutationAmount: integer("mutation_amount").notNull(),
+  mutationDescription: text("mutation_description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertMutationSchema = createSelectSchema(mutations);
+
+export const selectMutationSchema = createSelectSchema(mutations, {
+  mutationType: (mutationType) => mutationType,
+  mutationAmount: (mutationAmount) => mutationAmount,
+  mutationDescription: (mutationDescription) => mutationDescription,
+});
+
+export const selectUserSchema = createSelectSchema(users);
 
 export const selectNewsSchema = createSelectSchema(news);
 
