@@ -24,9 +24,6 @@ export const donations = pgTable("donations", {
 
 export const news = pgTable("news", {
   newsID: serial("news_id").primaryKey(),
-  authorID: integer("author_id")
-    .notNull()
-    .references(() => users.userID),
   newsImage: text("news_image").notNull(),
   newsName: text("news_name").notNull(),
   newsDescription: text("news_description").notNull(),
@@ -56,7 +53,6 @@ export const selectUserSchema = createSelectSchema(users);
 export const selectNewsSchema = createSelectSchema(news);
 
 export const insertNewsSchema = createInsertSchema(news, {
-  authorID: (authorID) => authorID,
   newsImage: (newsImage) => newsImage,
   newsName: (newsName) => newsName,
   newsDescription: (newsDescription) => newsDescription,

@@ -42,18 +42,25 @@ const parseNewsFormData = async (c: any) => {
 const parseDonationsFormData = async (c: any) => {
   const formData = await c.req.formData();
 
-  const donationAmount = formData.get("donationAmount") as number;
-  const donationDeduction = formData.get("donationDeduction") as number;
+  const donationAmount = formData.get("donationAmount") as string;
+  const donationDeduction = formData.get("donationDeduction") ? parseInt(formData.get("donationDeduction") as string) : 0;
   const donationType = formData.get("donationType") as string;
   const donaturName = formData.get("donaturName") as string;
   const donaturEmail = formData.get("donaturEmail") as string;
   const donaturMessage = formData.get("donaturMessage") as string;
 
-  if (!donationAmount || !donationDeduction || !donationType || !donaturName) {
+  if (!donationAmount || !donationType || !donaturName) {
     return null;
   }
 
-  return { donationAmount, donationDeduction, donationType, donaturName, donaturEmail, donaturMessage };
+  return { 
+    donationAmount, 
+    donationDeduction, 
+    donationType, 
+    donaturName, 
+    donaturEmail, 
+    donaturMessage 
+  };
 }
 
 export { parseNewsFormData };

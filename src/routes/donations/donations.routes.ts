@@ -110,7 +110,27 @@ export const excel = createRoute({
     }
 });
 
+export const getTopDonations = createRoute({
+    method: "get",
+    path: "/donations/top",
+    responses: {
+        [HttpStatusCodes.OK]: jsonContent(
+            z.object({
+                message: z.string(),
+                data: z.array(selectDonationSchema),
+            })    
+        , "Top donations retrieved"),
+        [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
+            z.object({
+                message: z.string(),
+                data: z.null(),
+            })
+        , "Error retrieving top donations"),
+    }
+});
+
 export type CreateRoute = typeof create;
 export type GetRoute = typeof get;
 export type CallbackRoute = typeof callback;
 export type ExcelRoute = typeof excel;
+export type GetTopDonationsRoute = typeof getTopDonations;

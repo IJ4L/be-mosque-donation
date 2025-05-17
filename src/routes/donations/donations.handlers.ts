@@ -8,6 +8,7 @@ import type {
   CreateRoute,
   ExcelRoute,
   GetRoute,
+  GetTopDonationsRoute,
 } from "./donations.routes.ts";
 // import sendWhatsAppMessage from "../../middlewares/wa-gateway.ts";
 import midtransClient from "midtrans-client";
@@ -35,7 +36,7 @@ export const create: AppRouteHandler<CreateRoute> = async (c) => {
     const parameter = {
       transaction_details: {
         order_id: orderId,
-        gross_amount: donation.donationAmount,
+        gross_amount: Number(donation.donationAmount),
       },
       customer_details: {
         first_name: donation.donaturName,
@@ -45,7 +46,7 @@ export const create: AppRouteHandler<CreateRoute> = async (c) => {
         {
           id: "donasi_custom",
           name: "Donasi Spesial",
-          price: donation.donationAmount,
+          price: Number(donation.donationAmount),
           quantity: 1,
         },
       ],
@@ -88,7 +89,6 @@ export const create: AppRouteHandler<CreateRoute> = async (c) => {
 
 export const midtransCallback: AppRouteHandler<CallbackRoute> = async (c) => {
   const body = await c.req.json();
-
   const transactionStatus = body.transaction_status;
   const fraudStatus = body.fraud_status;
   const isSuccess =
@@ -118,22 +118,41 @@ export const midtransCallback: AppRouteHandler<CallbackRoute> = async (c) => {
   const donationAmount = body.gross_amount;
   const donationType = body.payment_type;
   const donationDeduction = 0;
-
   const donation = {
-    donationAmount,
+    donationAmount: String(donationAmount),
     donationDeduction,
     donationType,
     donaturName,
     donaturEmail,
     donaturMessage,
   };
-
   try {
+    const existingMutation = await db
+      .select()
+      .from(mutations)
+      .where(sql`mutation_description LIKE ${`%${orderId}%`}`)
+      .limit(1);
+    if (existingMutation.length > 0) {
+      return c.json(
+        {
+          message: "Transaksi sudah pernah disimpan",
+          data: {
+            order_id: orderId || "",
+            transaction_status: transactionStatus || "",
+            fraud_status: fraudStatus || "",
+            status_code: body.status_code || "",
+            status_message: body.status_message || "",
+          },
+        },
+        HttpStatusCodes.OK
+      );
+    }
+
     await db.insert(donations).values(donation);
     await db.insert(mutations).values({
-      mutationType: "Income", 
-      mutationAmount: donationAmount,
-      mutationDescription: `Donation from ${donaturName} (${donaturEmail})`,
+      mutationType: "Income",
+      mutationAmount: Number(parseFloat(donationAmount)),
+      mutationDescription: `Donation from ${donaturName} (${donaturEmail}) - Order ID: ${orderId}`,
     });
   } catch (error) {
     console.error("Error saving donation:", error);
@@ -145,14 +164,13 @@ export const midtransCallback: AppRouteHandler<CallbackRoute> = async (c) => {
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
-
   return c.json(
     {
       message: "Data transaksi berhasil disimpan",
       data: {
-        order_id: orderId,
-        transaction_status: transactionStatus,
-        fraud_status: fraudStatus,
+        order_id: orderId || "",
+        transaction_status: transactionStatus || "",
+        fraud_status: fraudStatus || "",
         status_code: body.status_code || "",
         status_message: body.status_message || "",
       },
@@ -162,34 +180,37 @@ export const midtransCallback: AppRouteHandler<CallbackRoute> = async (c) => {
 };
 
 export const get: AppRouteHandler<GetRoute> = async (c) => {
-  const { page, limit } = c.req.valid('query');
+  const { page, limit } = c.req.valid("query");
   const offset = (page - 1) * limit;
-  
-  const countResult = await db.select({
-    count: sql`count(*)`.mapWith(Number)
-  }).from(donations);
-  
+
+  const countResult = await db
+    .select({
+      count: sql`count(*)`.mapWith(Number),
+    })
+    .from(donations);
+
   const total = countResult[0].count;
   const totalPages = Math.ceil(total / limit);
-  
-  const donationsList = await db.select()
+
+  const donationsList = await db
+    .select()
     .from(donations)
     .orderBy(desc(donations.createdAt))
     .limit(limit)
     .offset(offset);
-    
+
   return c.json(
-    { 
-      message: "Donations retrieved", 
+    {
+      message: "Donations retrieved",
       data: {
         donations: donationsList,
         pagination: {
           total,
           page,
           limit,
-          totalPages
-        }
-      } 
+          totalPages,
+        },
+      },
     },
     HttpStatusCodes.OK
   );
@@ -197,26 +218,29 @@ export const get: AppRouteHandler<GetRoute> = async (c) => {
 
 export const generateExcel: AppRouteHandler<ExcelRoute> = async (c) => {
   try {
-    const donationsList = await db.select()
+    const donationsList = await db
+      .select()
       .from(donations)
       .orderBy(desc(donations.createdAt));
 
-    const worksheetData = donationsList.map(donation => ({
-      'ID': donation.donationID,
-      'Donatur Name': donation.donaturName,
-      'Email': donation.donaturEmail || '-',
-      'Amount': donation.donationAmount,
-      'Type': donation.donationType,
-      'Message': donation.donaturMessage || '-',
-      'Created At': donation.createdAt ? new Date(donation.createdAt).toLocaleString() : '-',
+    const worksheetData = donationsList.map((donation) => ({
+      ID: donation.donationID,
+      "Donatur Name": donation.donaturName,
+      Email: donation.donaturEmail || "-",
+      Amount: donation.donationAmount,
+      Type: donation.donationType,
+      Message: donation.donaturMessage || "-",
+      "Created At": donation.createdAt
+        ? new Date(donation.createdAt).toLocaleString()
+        : "-",
     }));
-    
+
     const worksheet = XLSX.utils.json_to_sheet(worksheetData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Donations');
-    
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Donations");
+
     const columnWidths = [
-      { wch: 5 }, 
+      { wch: 5 },
       { wch: 25 },
       { wch: 30 },
       { wch: 15 },
@@ -224,55 +248,81 @@ export const generateExcel: AppRouteHandler<ExcelRoute> = async (c) => {
       { wch: 40 },
       { wch: 20 },
     ];
-    worksheet['!cols'] = columnWidths;
-    
+    worksheet["!cols"] = columnWidths;
+
     const headerStyle = {
       font: { bold: true, color: { rgb: "FFFFFF" } },
       fill: { fgColor: { rgb: "4472C4" } },
-      alignment: { horizontal: "center", vertical: "center" }
+      alignment: { horizontal: "center", vertical: "center" },
     };
-    
-    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+
+    const range = XLSX.utils.decode_range(worksheet["!ref"] || "A1");
     const tableStyle = {
       font: { name: "Arial" },
       border: {
         top: { style: "thin" },
         bottom: { style: "thin" },
         left: { style: "thin" },
-        right: { style: "thin" }
+        right: { style: "thin" },
       },
-      alignment: { vertical: "center", wrapText: true }
+      alignment: { vertical: "center", wrapText: true },
     };
     for (let R = range.s.r; R <= range.e.r; ++R) {
       for (let C = range.s.c; C <= range.e.c; ++C) {
         const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
         if (!worksheet[cellAddress]) continue;
-        
+
         if (R === 0) {
           worksheet[cellAddress].s = headerStyle;
-        } 
-        else {
-          const rowStyle = {...tableStyle};
+        } else {
+          const rowStyle = { ...tableStyle };
           worksheet[cellAddress].s = rowStyle;
         }
       }
     }
-    
-    const excelBuffer = XLSX.write(workbook, { 
-      type: 'buffer', 
-      bookType: 'xlsx',
-      bookSST: false
+
+    const excelBuffer = XLSX.write(workbook, {
+      type: "buffer",
+      bookType: "xlsx",
+      bookSST: false,
     });
-    
-    const filename = `Donations_${new Date().toISOString().split('T')[0]}.xlsx`;
-    c.header('Content-Disposition', `attachment; filename="${filename}"`);
-    c.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    
+
+    const filename = `Donations_${new Date().toISOString().split("T")[0]}.xlsx`;
+    c.header("Content-Disposition", `attachment; filename="${filename}"`);
+    c.header(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
     return c.body(excelBuffer);
   } catch (error) {
     console.error("Error generating Excel file:", error);
     return c.json(
       { message: "Error generating Excel file", data: null },
+      HttpStatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+};
+
+export const getTopDonations: AppRouteHandler<GetTopDonationsRoute> = async (c) => {
+  try {
+    const topDonationsList = await db
+      .select()
+      .from(donations)
+      .orderBy(sql`CAST(${donations.donationAmount} AS NUMERIC) DESC`)
+      .limit(5);
+
+    return c.json(
+      {
+        message: "Top donations retrieved",
+        data: topDonationsList
+      },
+      HttpStatusCodes.OK
+    );
+  } catch (error) {
+    console.error("Error retrieving top donations:", error);
+    return c.json(
+      { message: "Error retrieving top donations", data: null },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }

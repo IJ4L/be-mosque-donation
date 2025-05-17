@@ -6,6 +6,7 @@ const router = createRouter().
     openapi(Routes.create, Handlers.create).
     openapi(Routes.get, Handlers.get).
     openapi(Routes.callback, Handlers.midtransCallback).
-    openapi(Routes.excel, Handlers.generateExcel);
+    openapi(Routes.excel, Handlers.generateExcel).
+    openapi(Routes.getTopDonations, Handlers.getTopDonations);
 
 export default router;

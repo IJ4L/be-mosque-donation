@@ -16,7 +16,7 @@ export const list: AppRouteHandler<ListRoute> = async (c) => {
   const { page, limit } = querySchema.parse(c.req.query());
   const offset = (page - 1) * limit;
   const [newss, countResult] = await Promise.all([
-    db.select().from(news).offset(offset).limit(limit),
+    db.select().from(news).offset(offset).limit(limit).orderBy(sql`${news.createdAt} DESC`),
     db.select({ count: sql`count(*)` }).from(news),
   ]);
   

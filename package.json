@@ -5,12 +5,15 @@
     "dev": "tsx watch src/index.ts",
     "generate": "drizzle-kit generate",
     "migrate": "tsx src/db/migrate.ts",
-    "studio": "drizzle-kit studio"
+    "studio": "drizzle-kit studio",
+    "seed-admin": "tsx src/db/seed-admin.ts",
+    "reset-admin": "tsx src/db/reset-admin.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.8",
     "@hono/zod-openapi": "^0.19.2",
     "@hono/zod-validator": "^0.4.3",
+    "bcrypt": "^6.0.0",
     "dotenv": "^16.4.7",
     "dotenv-expand": "^12.0.1",
     "drizzle-orm": "^0.40.0",
@@ -31,6 +34,7 @@
     "zod-openapi": "^4.2.3"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^20.11.17",
     "@types/pg": "^8.11.11",
