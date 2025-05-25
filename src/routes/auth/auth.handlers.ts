@@ -6,6 +6,7 @@ import type {
   LoginRoute,
   UpdateUserRoute,
   GetUserRoute,
+  UpdatePasswordRoute,
 } from "./auth.routes.ts";
 import * as bcrypt from "bcrypt";
 import { eq, sql } from "drizzle-orm";
@@ -59,7 +60,7 @@ export const login: AppRouteHandler<LoginRoute> = async (c) => {
 export const updateUser: AppRouteHandler<UpdateUserRoute> = async (c) => {
   try {
     const userID = parseInt(c.req.param("userID"));
-    const { username, phoneNumber, password } = await c.req.json();
+    const { username, phoneNumber } = await c.req.json();
 
     const existingUser = await db
       .select()
@@ -74,16 +75,11 @@ export const updateUser: AppRouteHandler<UpdateUserRoute> = async (c) => {
       );
     }
 
-    const updateData: any = {
+    const updateData = {
       username,
       phoneNumber,
       updatedAt: new Date(),
     };
-
-    if (password) {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      updateData.password = hashedPassword;
-    }
 
     await db.update(users).set(updateData).where(eq(users.userID, userID));
 
@@ -135,6 +131,74 @@ export const getUser: AppRouteHandler<GetUserRoute> = async (c) => {
     console.error("Error saat mengambil data user:", error);
     return c.json(
       { message: "Terjadi kesalahan saat mengambil data user", data: null },
+      HttpStatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+};
+
+export const updatePassword: AppRouteHandler<UpdatePasswordRoute> = async (c) => {
+  try {
+    const userID = parseInt(c.req.param("userID"));
+    const { currentPassword, newPassword } = await c.req.json();
+    
+    console.log(`Attempting password update for userID: ${userID}`);
+    
+    if (!currentPassword || !newPassword) {
+      return c.json(
+        { message: "Password saat ini dan password baru harus diisi", data: null },
+        HttpStatusCodes.BAD_REQUEST
+      );
+    }
+
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.userID, userID))
+      .limit(1);
+
+    if (existingUser.length === 0) {
+      console.log("User not found in database");
+      return c.json(
+        { message: "User tidak ditemukan", data: null },
+        HttpStatusCodes.NOT_FOUND
+      );
+    }    console.log(`User found: ${existingUser[0].username}`);
+    
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      existingUser[0].password
+    );
+
+    console.log(`Password comparison result: ${isCurrentPasswordValid}`);
+
+    if (!isCurrentPasswordValid) {
+      return c.json(
+        { message: "Password saat ini tidak cocok", data: null },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await db
+      .update(users)
+      .set({
+        password: hashedPassword,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.userID, userID));
+
+    return c.json(
+      {
+        message: "Password berhasil diperbarui",
+        data: null,
+      },
+      HttpStatusCodes.OK
+    );
+  } catch (error) {
+    console.error("Error saat update password:", error);
+    return c.json(
+      { message: "Terjadi kesalahan saat update password", data: null },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }

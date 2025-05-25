@@ -36,6 +36,7 @@ export const mutations = pgTable("mutations", {
   mutationType: text("mutation_type").notNull(),
   mutationAmount: integer("mutation_amount").notNull(),
   mutationDescription: text("mutation_description"),
+  mutationStatus: text("mutation_status").default("completed"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

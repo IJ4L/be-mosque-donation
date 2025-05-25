@@ -54,14 +54,20 @@ export const excel = createRoute({
 export const getSummary = createRoute({
     method: "get",
     path: "/mutations/summary",
+    request: {
+        query: z.object({
+            month: z.string().optional().describe("Bulan dalam format YYYY-MM (contoh: 2025-05)")
+        })
+    },
     responses: {
         [HttpStatusCodes.OK]: jsonContent(
             z.object({
-                message: z.string(),
-                data: z.object({
+                message: z.string(),                data: z.object({
                     income: z.number().describe("Pendapatan"),
                     spending: z.number().describe("Penarikan"),
-                    balance: z.number().describe("Selisih")
+                    balance: z.number().describe("Selisih"),
+                    withdrawableBalance: z.number().describe("Saldo yang dapat dicairkan (lebih dari 1 hari)"),
+                    period: z.string().describe("Periode laporan")
                 }),
             })
         , "Mutation summary retrieved"),
@@ -74,6 +80,81 @@ export const getSummary = createRoute({
     }
 });
 
+export const payout = createRoute({
+    method: "post",
+    path: "/mutations/payout",
+    request: {
+        body: {
+            content: {
+                "application/json": {
+                    schema: z.object({
+                        amount: z.number().positive("Jumlah harus lebih dari 0").describe("Jumlah pengeluaran/penarikan"),
+                        description: z.string().min(1, "Deskripsi harus diisi").describe("Keterangan pengeluaran/penarikan")
+                    })
+                }
+            }
+        }
+    },
+    responses: {
+        [HttpStatusCodes.OK]: jsonContent(
+            z.object({
+                message: z.string(),
+                data: selectMutationSchema,
+            })
+        , "Payout created successfully"),
+        [HttpStatusCodes.BAD_REQUEST]: jsonContent(
+            z.object({
+                message: z.string(),
+                data: z.null(),
+            })
+        , "Invalid input"),
+        [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
+            z.object({
+                message: z.string(),
+                data: z.null(),
+            })
+        , "Error processing payout"),
+    }
+});
+
+export const approvePayout = createRoute({
+    method: "put",
+    path: "/mutations/payout/:mutationID/approve",
+    request: {
+        params: z.object({
+            mutationID: z.string().min(1, "ID mutasi harus diisi")
+        })
+    },
+    responses: {
+        [HttpStatusCodes.OK]: jsonContent(
+            z.object({
+                message: z.string(),
+                data: selectMutationSchema,
+            })
+        , "Payout approved successfully"),
+        [HttpStatusCodes.NOT_FOUND]: jsonContent(
+            z.object({
+                message: z.string(),
+                data: z.null(),
+            })
+        , "Payout not found"),
+        [HttpStatusCodes.BAD_REQUEST]: jsonContent(
+            z.object({
+                message: z.string(),
+                data: z.null(),
+            })
+        , "Invalid payout status"),
+        [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
+            z.object({
+                message: z.string(),
+                data: z.null(),
+            })
+        , "Error approving payout"),
+    }
+});
+
 export type GetRoute = typeof get;
 export type ExcelRoute = typeof excel;
 export type SummaryRoute = typeof getSummary;
+export type PayoutRoute = typeof payout;
+export type ApprovePayoutRoute = typeof approvePayout;
