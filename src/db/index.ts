@@ -1,9 +1,14 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-
+import pkg from "pg";
+const { Pool } = pkg;
 import env from "../env.js";
-import * as schema from "./schema.ts";
+import * as schema from "./schema.js";
 
-const db = drizzle(env.DATABASE_URL, {
+const pool = new Pool({
+  connectionString: env.DATABASE_URL,
+});
+
+const db = drizzle(pool, {
   schema: schema,
 });
 

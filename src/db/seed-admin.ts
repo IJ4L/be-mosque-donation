@@ -26,5 +26,4 @@ async function seedAdmin() {
   }
 }
 
-// Execute the seeder
 seedAdmin();

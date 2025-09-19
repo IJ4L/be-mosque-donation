@@ -156,37 +156,17 @@ export const getSummary: AppRouteHandler<SummaryRoute> = async (c) => {
     const spending = spendingResult[0]?.total || 0;
     const balance = income - spending;
     
-    const oneDayAgo = new Date();
-    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-    
-    let withdrawableIncomeCondition = sql`mutation_type = 'Income' AND created_at < ${oneDayAgo.toISOString()}`;
-    let withdrawableSpendingCondition = sql`mutation_type = 'Spending' AND (mutation_status = 'completed' OR mutation_status IS NULL)`;
-    
-    if (month) {
-      const [year, monthNum] = month.split('-');
-      if (year && monthNum) {
-        const startDate = new Date(parseInt(year), parseInt(monthNum) - 1, 1);
-        const endDate = new Date(parseInt(year), parseInt(monthNum), 0, 23, 59, 59, 999);
-        
-        withdrawableIncomeCondition = sql`mutation_type = 'Income' AND created_at < ${oneDayAgo.toISOString()} AND created_at >= ${startDate.toISOString()} AND created_at <= ${endDate.toISOString()}`;
-        withdrawableSpendingCondition = sql`mutation_type = 'Spending' AND (mutation_status = 'completed' OR mutation_status IS NULL) AND created_at >= ${startDate.toISOString()} AND created_at <= ${endDate.toISOString()}`;
-      }
-    }
-    
     const withdrawableIncomeResult = await db.select({
       total: sql`COALESCE(SUM(mutation_amount), 0)`.mapWith(Number)
     })
     .from(mutations)
-    .where(withdrawableIncomeCondition);
-    
+    .where(sql`mutation_type = 'Income'`);
     const withdrawableIncome = withdrawableIncomeResult[0]?.total || 0;
-    
     const withdrawableSpendingResult = await db.select({
       total: sql`COALESCE(SUM(mutation_amount), 0)`.mapWith(Number)
     })
     .from(mutations)
-    .where(withdrawableSpendingCondition);
-    
+    .where(sql`mutation_type = 'Spending' AND (mutation_status = 'completed' OR mutation_status IS NULL)`);
     const withdrawableSpending = withdrawableSpendingResult[0]?.total || 0;
     const withdrawableBalance = withdrawableIncome - withdrawableSpending;
     
@@ -274,26 +254,19 @@ export const createPayout: AppRouteHandler<PayoutRoute> = async (c) => {
     const spending = spendingResult[0]?.total || 0;
     const currentBalance = income - spending;
     
-    const oneDayAgo = new Date();
-    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-    
     const withdrawableIncomeResult = await db.select({
       total: sql`COALESCE(SUM(mutation_amount), 0)`.mapWith(Number)
     })
     .from(mutations)
-    .where(sql`mutation_type = 'Income' AND created_at < ${oneDayAgo.toISOString()}`);
-    
+    .where(sql`mutation_type = 'Income'`);
     const withdrawableIncome = withdrawableIncomeResult[0]?.total || 0;
-    
     const withdrawableSpendingResult = await db.select({
       total: sql`COALESCE(SUM(mutation_amount), 0)`.mapWith(Number)
     })
     .from(mutations)
     .where(sql`mutation_type = 'Spending' AND (mutation_status = 'completed' OR mutation_status IS NULL)`);
-    
     const withdrawableSpending = withdrawableSpendingResult[0]?.total || 0;
     const withdrawableBalance = withdrawableIncome - withdrawableSpending;
-    
     if (amount > currentBalance) {
       return c.json(
         { 
@@ -303,11 +276,10 @@ export const createPayout: AppRouteHandler<PayoutRoute> = async (c) => {
         HttpStatusCodes.BAD_REQUEST
       );
     }
-    
     if (amount > withdrawableBalance) {
       return c.json(
         { 
-          message: `Jumlah penarikan (${amount}) melebihi saldo yang dapat dicairkan (${withdrawableBalance}). Saldo donasi yang baru masuk harus menunggu minimal 1 hari untuk dapat dicairkan.`, 
+          message: `Jumlah penarikan (${amount}) melebihi saldo yang dapat dicairkan (${withdrawableBalance}).`, 
           data: null 
         },
         HttpStatusCodes.BAD_REQUEST

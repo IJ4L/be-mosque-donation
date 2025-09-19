@@ -1,34 +1,5 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1747208258855,
-      "tag": "0000_watery_silk_fever",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1747318760526,
-      "tag": "0001_sharp_payback",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1747380391085,
-      "tag": "0002_rapid_harrier",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1748173248977,
-      "tag": "0003_illegal_runaways",
-      "breakpoints": true
-    }
-  ]
+  "version": "5",
+  "dialect": "pg",
+  "entries": []
 }

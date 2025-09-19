@@ -15,8 +15,8 @@ export const donations = pgTable("donations", {
   donationAmount: text("donation_amount").notNull(),
   donationDeduction: integer("donation_deduction").notNull(),
   donationType: text("donation_type").notNull(),
-  donaturName: text("donatur_name").notNull(),
-  donaturEmail: text("donatur_email"),
+  donaturName: text("donatur_name"),
+  phoneNumber: text("phone_number"),
   donaturMessage: text("donatur_message"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -66,7 +66,7 @@ export const insertDonationSchema = createInsertSchema(donations, {
   donationDeduction: (donationDeduction) => donationDeduction,
   donationType: (donationType) => donationType,
   donaturName: (donaturName) => donaturName,
-  donaturEmail: (donaturEmail) => donaturEmail,
+  phoneNumber: (phoneNumber) => phoneNumber,
   donaturMessage: (donaturMessage) => donaturMessage,
 });
 

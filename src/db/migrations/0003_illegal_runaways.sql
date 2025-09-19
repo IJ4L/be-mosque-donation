@@ -1,1 +1,2 @@
-ALTER TABLE "mutations" ADD COLUMN "mutation_status" text DEFAULT 'completed';
+ALTER TABLE "mutations"
+ADD COLUMN "mutation_status" text DEFAULT 'completed';

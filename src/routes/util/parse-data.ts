@@ -42,23 +42,42 @@ const parseNewsFormData = async (c: any) => {
 const parseDonationsFormData = async (c: any) => {
   const formData = await c.req.formData();
 
+  // Log all form keys for debugging
+  console.log("Form data keys:", [...formData.keys()]);
+  
   const donationAmount = formData.get("donationAmount") as string;
   const donationDeduction = formData.get("donationDeduction") ? parseInt(formData.get("donationDeduction") as string) : 0;
   const donationType = formData.get("donationType") as string;
   const donaturName = formData.get("donaturName") as string;
-  const donaturEmail = formData.get("donaturEmail") as string;
+  
+  // Handle phone number explicitly and log its value
+  // First check for "donaturNumber" which is what the form is actually using
+  let phoneNumber = formData.get("donaturNumber") as string;
+  console.log("Raw phone number from donaturNumber field:", phoneNumber);
+  
+  // Also try alternate field names as fallback
+  if (!phoneNumber) {
+    phoneNumber = formData.get("phoneNumber") as string || 
+                  formData.get("phone") as string || 
+                  formData.get("phone_number") as string || "";
+    console.log("Phone number from alternate fields:", phoneNumber);
+  }
+  
   const donaturMessage = formData.get("donaturMessage") as string;
 
-  if (!donationAmount || !donationType || !donaturName) {
+  if (!donationAmount || !donationType) {
     return null;
   }
+
+  // Log the final phone number we're using
+  console.log("Final phone number to be used:", phoneNumber);
 
   return { 
     donationAmount, 
     donationDeduction, 
     donationType, 
     donaturName, 
-    donaturEmail, 
+    phoneNumber, // This will now use donaturNumber from the form
     donaturMessage 
   };
 }

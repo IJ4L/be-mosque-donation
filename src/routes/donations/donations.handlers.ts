@@ -24,6 +24,8 @@ const snap = new midtransClient.Snap({
 
 export const create: AppRouteHandler<CreateRoute> = async (c) => {
   const donation = await parseDonationsFormData(c);
+  console.log("Received donation data:", donation);
+  
   if (!donation) {
     return c.json(
       { message: "Invalid donation", data: null },
@@ -31,8 +33,19 @@ export const create: AppRouteHandler<CreateRoute> = async (c) => {
     );
   }
 
+  if (!donation.donaturName) donation.donaturName = "Hamba Allah.";
+  if (!donation.donaturMessage) donation.donaturMessage = "-";
+  if (!donation.phoneNumber) donation.phoneNumber = "-";
+  
+  console.log("Processed donation data:", donation);
+
   try {
     const orderId = `ORDER-${Date.now()}`;
+    
+    const phoneForMidtrans = donation.phoneNumber && donation.phoneNumber !== "-" && donation.phoneNumber.trim() !== "" 
+      ? donation.phoneNumber 
+      : "62000000000";
+    
     const parameter = {
       transaction_details: {
         order_id: orderId,
@@ -40,7 +53,7 @@ export const create: AppRouteHandler<CreateRoute> = async (c) => {
       },
       customer_details: {
         first_name: donation.donaturName,
-        email: donation.donaturEmail,
+        phone: phoneForMidtrans,
       },
       item_details: [
         {
@@ -51,9 +64,11 @@ export const create: AppRouteHandler<CreateRoute> = async (c) => {
         },
       ],
       custom_field1: donation.donaturName,
-      custom_field2: donation.donaturEmail,
+      custom_field2: donation.phoneNumber,
       custom_field3: donation.donaturMessage,
     };
+    
+    console.log("Midtrans parameters:", parameter);
     const transaction = await snap.createTransaction(parameter);
     const snapToken = transaction.token;
 
@@ -112,9 +127,18 @@ export const midtransCallback: AppRouteHandler<CallbackRoute> = async (c) => {
   }
 
   const orderId = body.order_id;
-  const donaturName = body.custom_field1;
-  const donaturEmail = body.custom_field2;
-  const donaturMessage = body.custom_field3;
+  const donaturName = body.custom_field1 || "Hamba Allah.";
+  
+  let phoneNumber = body.custom_field2 || "";
+  if ((!phoneNumber || phoneNumber === "-") && body.customer_details && body.customer_details.phone) {
+    phoneNumber = body.customer_details.phone;
+  }
+
+  phoneNumber = phoneNumber || "-";
+  
+  console.log("Callback phone number:", phoneNumber);
+  
+  const donaturMessage = body.custom_field3 || "-";
   const donationAmount = body.gross_amount;
   const donationType = body.payment_type;
   const donationDeduction = 0;
@@ -123,9 +147,11 @@ export const midtransCallback: AppRouteHandler<CallbackRoute> = async (c) => {
     donationDeduction,
     donationType,
     donaturName,
-    donaturEmail,
+    phoneNumber,
     donaturMessage,
   };
+  
+  console.log("Donation data to be saved:", donation);
   try {
     const existingMutation = await db
       .select()
@@ -152,7 +178,7 @@ export const midtransCallback: AppRouteHandler<CallbackRoute> = async (c) => {
     await db.insert(mutations).values({
       mutationType: "Income",
       mutationAmount: Number(parseFloat(donationAmount)),
-      mutationDescription: `Donation from ${donaturName} (${donaturEmail}) - Order ID: ${orderId}`,
+      mutationDescription: `Donation from ${donaturName} (${phoneNumber}) - Order ID: ${orderId}`,
     });
   } catch (error) {
     console.error("Error saving donation:", error);
@@ -226,7 +252,7 @@ export const generateExcel: AppRouteHandler<ExcelRoute> = async (c) => {
     const worksheetData = donationsList.map((donation) => ({
       ID: donation.donationID,
       "Donatur Name": donation.donaturName,
-      Email: donation.donaturEmail || "-",
+      "Phone Number": donation.phoneNumber || "-",
       Amount: donation.donationAmount,
       Type: donation.donationType,
       Message: donation.donaturMessage || "-",
