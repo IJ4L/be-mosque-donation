@@ -1,114 +1,191 @@
-import db from "../../db/index.ts";
 import * as HttpStatusCodes from "stoker/http-status-codes";
-import { news } from "../../db/schema.ts";
 import type { AppRouteHandler } from "../../lib/types.ts";
-import type {CreateRoute, GetOneRoute, ListRoute, PatchRoute, RemoveRoute,} from "./news.routes.ts";
-import { eq, sql } from "drizzle-orm";
-import { parseNewsFormData } from "../util/parse-data.ts";
-import { z } from "zod"; // Add this import for validation
+import { parseNewsFormData, parseNewsFormDataForUpdate } from "../util/parse-data.ts";
+import type { CreateNewsData } from "./types/news.types.ts";
+import newsService from "./services/news.service.ts";
+
+import type {
+  CreateRoute,
+  GetOneRoute,
+  ListRoute,
+  PatchRoute,
+  RemoveRoute,
+} from "./news.routes.ts";
+
+import {
+  ValidationUtils,
+  ResponseUtils,
+  TransformUtils,
+} from "./utils/news.utils.ts";
 
 export const list: AppRouteHandler<ListRoute> = async (c) => {
-  const querySchema = z.object({
-    page: z.coerce.number().int().positive().default(1),
-    limit: z.coerce.number().int().positive().default(10),
-  });
+  try {
+    const { page, limit } = c.req.valid("query");
 
-  const { page, limit } = querySchema.parse(c.req.query());
-  const offset = (page - 1) * limit;
-  const [newss, countResult] = await Promise.all([
-    db.select().from(news).offset(offset).limit(limit).orderBy(sql`${news.createdAt} DESC`),
-    db.select({ count: sql`count(*)` }).from(news),
-  ]);
-  
-  const total = Number(countResult[0]?.count || 0);
+    const result = await newsService.getNews(page, limit);
+    if (!result.success) {
+      throw new Error(result.error!);
+    }
 
-  const totalPages = Math.ceil(total / limit);
+    const transformedNews = result.data!.news.map(TransformUtils.transformNewsDates);
 
-  return c.json(
-    {
-      message: "Successfully get news",
-      data: newss,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages,
+    return c.json(
+      {
+        message: "Successfully get news",
+        data: transformedNews,
+        pagination: result.data!.pagination,
       },
-    },
-    HttpStatusCodes.OK
-  );
+      HttpStatusCodes.OK
+    );
+  } catch (error) {
+    throw error;
+  }
 };
 
 export const create: AppRouteHandler<CreateRoute> = async (c) => {
-  const newss = await parseNewsFormData(c);
-  if (!newss) {
+  try {
+    const rawNewsData = await parseNewsFormData(c);
+    if (!rawNewsData) {
+      return c.json(
+        { message: "Invalid request body", data: null },
+        HttpStatusCodes.UNPROCESSABLE_ENTITY
+      );
+    }
+
+    const newsData = TransformUtils.sanitizeNewsData(rawNewsData);
+    const validation = ValidationUtils.validateCreateNews(newsData);
+    if (!validation.isValid) {
+      return c.json(
+        { message: validation.errors.join(", "), data: null },
+        HttpStatusCodes.UNPROCESSABLE_ENTITY
+      );
+    }
+
+    const createData: CreateNewsData = {
+      newsImage: newsData.newsImage,
+      newsName: newsData.newsName,
+      newsDescription: newsData.newsDescription,
+    };
+
+    const result = await newsService.createNews(createData);
+    if (!result.success) {
+      return c.json(
+        { message: result.error!, data: null },
+        HttpStatusCodes.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    const transformedNews = TransformUtils.transformNewsDates(result.data!);
+
     return c.json(
-      { message: "Invalid request body", data: null },
-      HttpStatusCodes.UNPROCESSABLE_ENTITY
+      {
+        message: "News created successfully",
+        data: transformedNews,
+      },
+      HttpStatusCodes.OK
+    );
+  } catch (error) {
+    return c.json(
+      { message: "Failed to create news", data: null },
+      HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
-
-  const [insertedNews] = await db.insert(news).values(newss).returning();
-  return c.json(
-    { message: "Successfully added news", data: insertedNews },
-    HttpStatusCodes.OK
-  );
 };
 
 export const getOne: AppRouteHandler<GetOneRoute> = async (c) => {
-  const { id } = c.req.valid("param");
-  const newss = await db.select().from(news).where(eq(news.newsID, id)).limit(1);
+  try {
+    const { id } = c.req.valid("param");
 
-  if (newss.length === 0) {
+    const result = await newsService.getNewsById(id);
+    if (!result.success) {
+      if (result.error?.includes("tidak ditemukan")) {
+        return c.json(
+          { message: result.error!, data: null },
+          HttpStatusCodes.NOT_FOUND
+        );
+      }
+      throw new Error(result.error!);
+    }
+
+    const transformedNews = TransformUtils.transformNewsDates(result.data!);
+
     return c.json(
-      { message: "News not found", data: null },
-      HttpStatusCodes.NOT_FOUND
+      {
+        message: "News retrieved successfully",
+        data: transformedNews,
+      },
+      HttpStatusCodes.OK
     );
+  } catch (error) {
+    throw error;
   }
-
-  return c.json(
-    { message: "Successfully get news", data: newss[0] },
-    HttpStatusCodes.OK
-  );
 };
 
 export const patch: AppRouteHandler<PatchRoute> = async (c) => {
-  const { id } = c.req.valid("param");
-  const newss = await parseNewsFormData(c);
+  try {
+    const { id } = c.req.valid("param");
+    const rawUpdateData = await parseNewsFormDataForUpdate(c);
+    
+    if (!rawUpdateData) {
+      return c.json(
+        { message: "Invalid request body", data: null },
+        HttpStatusCodes.UNPROCESSABLE_ENTITY
+      );
+    }
 
-  if (!newss) {
+    const updateValidation = ValidationUtils.validateUpdateNews(rawUpdateData);
+    if (!updateValidation.isValid) {
+      return c.json(
+        { message: updateValidation.errors.join(", "), data: null },
+        HttpStatusCodes.UNPROCESSABLE_ENTITY
+      );
+    }
+
+    const result = await newsService.updateNews(id, rawUpdateData);
+    if (!result.success) {
+      if (result.error?.includes("tidak ditemukan")) {
+        return c.json(
+          { message: result.error!, data: null },
+          HttpStatusCodes.NOT_FOUND
+        );
+      }
+      throw new Error(result.error!);
+    }
+
+    const transformedNews = TransformUtils.transformNewsDates(result.data!);
+
     return c.json(
-      { message: "Invalid request body", data: null },
-      HttpStatusCodes.UNPROCESSABLE_ENTITY
+      {
+        message: "Successfully updated news",
+        data: transformedNews,
+      },
+      HttpStatusCodes.OK
     );
+  } catch (error) {
+    throw error;
   }
-
-  const [updatedNews] = await db.update(news).set(newss).where(eq(news.newsID, id)).returning();
-
-  if (!updatedNews) {
-    return c.json(
-      { message: "News not found", data: null },
-      HttpStatusCodes.NOT_FOUND
-    );
-  }
-
-  return c.json(
-    { message: "Successfully updated news", data: updatedNews },
-    HttpStatusCodes.OK
-  );
 };
 
 export const remove: AppRouteHandler<RemoveRoute> = async (c) => {
-  const { id } = c.req.valid("param");
-  const [newsItem] = await db.select().from(news).where(eq(news.newsID, id)).limit(1);
-  
-  if (!newsItem) {
-    return c.json(
-      { message: "News not found", data: null },
-      HttpStatusCodes.NOT_FOUND
-    );
-  }
+  try {
+    const { id } = c.req.valid("param");
 
-  await db.delete(news).where(eq(news.newsID, newsItem.newsID));
-  return c.json({ message: "Successfully deleted news" }, HttpStatusCodes.OK);
+    const result = await newsService.deleteNews(id);
+    if (!result.success) {
+      if (result.error?.includes("tidak ditemukan")) {
+        return c.json(
+          { message: result.error! },
+          HttpStatusCodes.NOT_FOUND
+        );
+      }
+      throw new Error(result.error!);
+    }
+
+    return c.json(
+      { message: "Successfully deleted news" },
+      HttpStatusCodes.OK
+    );
+  } catch (error) {
+    throw error;
+  }
 };

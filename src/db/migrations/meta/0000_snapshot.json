@@ -1,18 +1,241 @@
 {
+  "id": "b137c4f4-f2ca-46a8-bddc-ea83d6e9ce59",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
-  "tables": {},
+  "tables": {
+    "public.donations": {
+      "name": "donations",
+      "schema": "",
+      "columns": {
+        "donation_id": {
+          "name": "donation_id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "donation_amount": {
+          "name": "donation_amount",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "donation_deduction": {
+          "name": "donation_deduction",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "donation_type": {
+          "name": "donation_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "donatur_name": {
+          "name": "donatur_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone_number": {
+          "name": "phone_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "donatur_message": {
+          "name": "donatur_message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.mutations": {
+      "name": "mutations",
+      "schema": "",
+      "columns": {
+        "mutation_id": {
+          "name": "mutation_id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "mutation_type": {
+          "name": "mutation_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mutation_amount": {
+          "name": "mutation_amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mutation_description": {
+          "name": "mutation_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mutation_status": {
+          "name": "mutation_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'completed'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.news": {
+      "name": "news",
+      "schema": "",
+      "columns": {
+        "news_id": {
+          "name": "news_id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "news_image": {
+          "name": "news_image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "news_name": {
+          "name": "news_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "news_description": {
+          "name": "news_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "username": {
+          "name": "username",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phone_number": {
+          "name": "phone_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
   "enums": {},
   "schemas": {},
-  "_meta": {
-    "schemas": {},
-    "tables": {},
-    "columns": {}
-  },
-  "id": "0000_snapshot",
-  "prevId": "",
   "sequences": {},
+  "roles": {},
   "policies": {},
   "views": {},
-  "roles": {}
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
 }

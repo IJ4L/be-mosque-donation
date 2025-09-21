@@ -6,11 +6,9 @@ async function clearDatabase() {
   await db.delete(news);
   await db.delete(mutations);
   await db.delete(donations);
-  console.log('All data deleted.');
   process.exit(0);
 }
 
 clearDatabase().catch((err) => {
-  console.error(err);
   process.exit(1);
 });

@@ -1,57 +1,74 @@
-import db from "../../db/index.ts";
-import { users } from "../../db/schema.ts";
-import type { AppRouteHandler } from "../../lib/types.ts";
 import * as HttpStatusCodes from "stoker/http-status-codes";
+import authService from "./services/auth.service.ts";
+import type { AppRouteHandler } from "../../lib/types.ts";
+
 import type {
   LoginRoute,
   UpdateUserRoute,
   GetUserRoute,
   UpdatePasswordRoute,
 } from "./auth.routes.ts";
-import * as bcrypt from "bcrypt";
-import { eq, sql } from "drizzle-orm";
+
+import {
+  PasswordUtils,
+  ValidationUtils,
+  ResponseUtils,
+  TransformUtils,
+} from "./utils/auth.utils.ts";
+
 
 export const login: AppRouteHandler<LoginRoute> = async (c) => {
   try {
-    const { identifier, password } = await c.req.json();
+    const rawCredentials = await c.req.json();
+    const credentials = TransformUtils.sanitizeLoginCredentials(rawCredentials);
 
-    const user = await db
-      .select()
-      .from(users)
-      .where(
-        sql`${users.username} = ${identifier} OR ${users.phoneNumber} = ${identifier}`
-      )
-      .limit(1);
 
-    if (user.length === 0) {
+    const validation = ValidationUtils.validateLoginCredentials(credentials);
+    if (!validation.isValid) {
       return c.json(
-        { message: "Username atau nomor telepon tidak ditemukan", data: null },
+        ResponseUtils.createValidationErrorResponse(validation.errors),
         HttpStatusCodes.BAD_REQUEST
       );
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user[0].password);
+    const userResult = await authService.login(credentials);
+    if (!userResult.success) {
+      return c.json(
+        ResponseUtils.createErrorResponse(userResult.error!),
+        HttpStatusCodes.BAD_REQUEST
+      );
+    }
+
+    const user = userResult.data as any;
+    const isPasswordValid = await PasswordUtils.comparePassword(
+      credentials.password,
+      user.userPassword
+    );
 
     if (!isPasswordValid) {
       return c.json(
-        { message: "Password salah", data: null },
+        ResponseUtils.createErrorResponse("Password salah"),
         HttpStatusCodes.UNAUTHORIZED
       );
     }
 
-    const { password: _, ...userWithoutPassword } = user[0];
+    const { userPassword, ...userWithoutPassword } = user;
+    const transformedUser = {
+      ...userWithoutPassword,
+      updatedAt: userWithoutPassword.updatedAt.toISOString()
+    };
 
     return c.json(
       {
         message: "Login berhasil",
-        data: userWithoutPassword,
+        data: transformedUser,
       },
       HttpStatusCodes.OK
     );
+
   } catch (error) {
-    console.error("Error saat login:", error);
     return c.json(
-      { message: "Terjadi kesalahan saat login", data: null },
+      ResponseUtils.createErrorResponse("Terjadi kesalahan saat login"),
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -60,48 +77,48 @@ export const login: AppRouteHandler<LoginRoute> = async (c) => {
 export const updateUser: AppRouteHandler<UpdateUserRoute> = async (c) => {
   try {
     const userID = parseInt(c.req.param("userID"));
-    const { username, phoneNumber } = await c.req.json();
+    const rawUserData = await c.req.json();
+    const userData = TransformUtils.sanitizeUpdateUserData(rawUserData);
 
-    const existingUser = await db
-      .select()
-      .from(users)
-      .where(eq(users.userID, userID))
-      .limit(1);
 
-    if (existingUser.length === 0) {
+    const validation = ValidationUtils.validateUpdateUserData(userData);
+    if (!validation.isValid) {
       return c.json(
-        { message: "User tidak ditemukan", data: null },
-        HttpStatusCodes.NOT_FOUND
+        ResponseUtils.createValidationErrorResponse(validation.errors),
+        HttpStatusCodes.BAD_REQUEST
       );
     }
 
-    const updateData = {
-      username,
-      phoneNumber,
-      updatedAt: new Date(),
+    const updateResult = await authService.updateUser(userID, userData);
+    if (!updateResult.success) {
+      
+      const statusCode = updateResult.error?.includes("tidak ditemukan") 
+        ? HttpStatusCodes.NOT_FOUND 
+        : HttpStatusCodes.INTERNAL_SERVER_ERROR;
+        
+      return c.json(
+        ResponseUtils.createErrorResponse(updateResult.error!),
+        statusCode
+      );
+    }
+
+    
+    const transformedUser = {
+      ...updateResult.data!,
+      updatedAt: updateResult.data!.updatedAt.toISOString()
     };
-
-    await db.update(users).set(updateData).where(eq(users.userID, userID));
-
-    const updatedUser = await db
-      .select()
-      .from(users)
-      .where(eq(users.userID, userID))
-      .limit(1);
-
-    const { password: _, ...userWithoutPassword } = updatedUser[0];
-
+    
     return c.json(
       {
         message: "Data user berhasil diperbarui",
-        data: userWithoutPassword,
+        data: transformedUser,
       },
       HttpStatusCodes.OK
     );
+
   } catch (error) {
-    console.error("Error saat update user:", error);
     return c.json(
-      { message: "Terjadi kesalahan saat update user", data: null },
+      ResponseUtils.createErrorResponse("Terjadi kesalahan saat update user"),
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -109,28 +126,31 @@ export const updateUser: AppRouteHandler<UpdateUserRoute> = async (c) => {
 
 export const getUser: AppRouteHandler<GetUserRoute> = async (c) => {
   try {
-    const user = await db.select().from(users).limit(1);
 
-    if (user.length === 0) {
+    const userResult = await authService.getFirstUser();
+    if (!userResult.success) {
       return c.json(
-        { message: "User tidak ditemukan", data: null },
+        ResponseUtils.createErrorResponse(userResult.error!),
         HttpStatusCodes.NOT_FOUND
       );
     }
-
-    const { password: _, ...userWithoutPassword } = user[0];
-
+    
+    const transformedUser = {
+      ...userResult.data!,
+      updatedAt: userResult.data!.updatedAt.toISOString()
+    };
+    
     return c.json(
       {
         message: "Data user berhasil diambil",
-        data: userWithoutPassword,
+        data: transformedUser,
       },
       HttpStatusCodes.OK
     );
+
   } catch (error) {
-    console.error("Error saat mengambil data user:", error);
     return c.json(
-      { message: "Terjadi kesalahan saat mengambil data user", data: null },
+      ResponseUtils.createErrorResponse("Terjadi kesalahan saat mengambil data user"),
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -139,66 +159,55 @@ export const getUser: AppRouteHandler<GetUserRoute> = async (c) => {
 export const updatePassword: AppRouteHandler<UpdatePasswordRoute> = async (c) => {
   try {
     const userID = parseInt(c.req.param("userID"));
-    const { currentPassword, newPassword } = await c.req.json();
-    
-    console.log(`Attempting password update for userID: ${userID}`);
-    
-    if (!currentPassword || !newPassword) {
+    const passwordData = await c.req.json();
+
+    const validation = ValidationUtils.validatePasswordUpdateData(passwordData);
+    if (!validation.isValid) {
       return c.json(
-        { message: "Password saat ini dan password baru harus diisi", data: null },
+        ResponseUtils.createValidationErrorResponse(validation.errors),
         HttpStatusCodes.BAD_REQUEST
       );
     }
 
-    const existingUser = await db
-      .select()
-      .from(users)
-      .where(eq(users.userID, userID))
-      .limit(1);
-
-    if (existingUser.length === 0) {
-      console.log("User not found in database");
+    const userResult = await authService.updatePassword(userID, passwordData, "");
+    if (!userResult.success) {
       return c.json(
-        { message: "User tidak ditemukan", data: null },
+        ResponseUtils.createErrorResponse(userResult.error!),
         HttpStatusCodes.NOT_FOUND
       );
-    }    console.log(`User found: ${existingUser[0].username}`);
-    
-    const isCurrentPasswordValid = await bcrypt.compare(
-      currentPassword,
-      existingUser[0].password
-    );
+    }
 
-    console.log(`Password comparison result: ${isCurrentPasswordValid}`);
+    const currentPasswordHash = userResult.data as any;
+    const isCurrentPasswordValid = await PasswordUtils.comparePassword(
+      passwordData.currentPassword,
+      currentPasswordHash
+    );
 
     if (!isCurrentPasswordValid) {
       return c.json(
-        { message: "Password saat ini tidak cocok", data: null },
+        ResponseUtils.createErrorResponse("Password saat ini tidak cocok"),
         HttpStatusCodes.UNAUTHORIZED
       );
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedNewPassword = await PasswordUtils.hashPassword(passwordData.newPassword);
 
-    await db
-      .update(users)
-      .set({
-        password: hashedPassword,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.userID, userID));
+    const saveResult = await authService.saveNewPassword(userID, hashedNewPassword);
+    if (!saveResult.success) {
+      return c.json(
+        ResponseUtils.createErrorResponse(saveResult.error!),
+        HttpStatusCodes.INTERNAL_SERVER_ERROR
+      );
+    }
 
     return c.json(
-      {
-        message: "Password berhasil diperbarui",
-        data: null,
-      },
+      ResponseUtils.createSuccessResponse("Password berhasil diperbarui", null),
       HttpStatusCodes.OK
     );
+
   } catch (error) {
-    console.error("Error saat update password:", error);
     return c.json(
-      { message: "Terjadi kesalahan saat update password", data: null },
+      ResponseUtils.createErrorResponse("Terjadi kesalahan saat update password"),
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }

@@ -10,6 +10,12 @@ export const list = createRoute({
   path: "/news",
   method: "get",
   tags: tags,
+  request: {
+    query: z.object({
+      page: z.coerce.number().int().positive().default(1),
+      limit: z.coerce.number().int().positive().default(10),
+    }),
+  },
   responses: {
     [HttpStatusCodes.OK]: jsonContent(
       z.object({

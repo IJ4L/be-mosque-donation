@@ -1,7 +1,7 @@
 import * as HttpStatusCodes from "stoker/http-status-codes";
 import { createRoute, z } from "@hono/zod-openapi";
 import { jsonContent } from "stoker/openapi/helpers";
-import { selectMutationSchema } from "../../db/schema.ts";
+import { selectMutationSchema } from "../../db/schema.js";
 
 export const get = createRoute({
     method: "get",

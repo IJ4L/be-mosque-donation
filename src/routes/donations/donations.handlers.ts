@@ -1,8 +1,11 @@
-import db from "../../db/index.ts";
-import { donations, mutations } from "../../db/schema.ts";
+import * as HttpStatusCodes from "stoker/http-status-codes";
 import type { AppRouteHandler } from "../../lib/types.ts";
 import { parseDonationsFormData } from "../util/parse-data.ts";
-import * as HttpStatusCodes from "stoker/http-status-codes";
+
+import midtransService from "./services/midtrans.service.ts";
+import donationService from "./services/donation.service.ts";
+import excelService from "./services/excel.service.ts";
+
 import type {
   CallbackRoute,
   CreateRoute,
@@ -10,310 +13,183 @@ import type {
   GetRoute,
   GetTopDonationsRoute,
 } from "./donations.routes.ts";
-// import sendWhatsAppMessage from "../../middlewares/wa-gateway.ts";
-import midtransClient from "midtrans-client";
-import env from "../../env.ts";
-import { desc, sql } from "drizzle-orm";
-import * as XLSX from "xlsx";
 
-const snap = new midtransClient.Snap({
-  isProduction: env.MIDTRANS_IS_PRODUCTION === "true",
-  serverKey: env.MIDTRANS_SERVER_KEY,
-  clientKey: env.MIDTRANS_CLIENT_KEY,
-});
+
+import {
+  sanitizeDonationData,
+  extractDonationFromCallback,
+  validateDonation,
+  createResponse,
+  logDonation,
+} from "./utils/donation.utils.ts";
 
 export const create: AppRouteHandler<CreateRoute> = async (c) => {
-  const donation = await parseDonationsFormData(c);
-  console.log("Received donation data:", donation);
-  
-  if (!donation) {
-    return c.json(
-      { message: "Invalid donation", data: null },
-      HttpStatusCodes.BAD_REQUEST
-    );
-  }
-
-  if (!donation.donaturName) donation.donaturName = "Hamba Allah.";
-  if (!donation.donaturMessage) donation.donaturMessage = "-";
-  if (!donation.phoneNumber) donation.phoneNumber = "-";
-  
-  console.log("Processed donation data:", donation);
-
   try {
-    const orderId = `ORDER-${Date.now()}`;
+    const rawDonation = await parseDonationsFormData(c);
+    const donation = sanitizeDonationData(rawDonation);
     
-    const phoneForMidtrans = donation.phoneNumber && donation.phoneNumber !== "-" && donation.phoneNumber.trim() !== "" 
-      ? donation.phoneNumber 
-      : "62000000000";
-    
-    const parameter = {
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: Number(donation.donationAmount),
-      },
-      customer_details: {
-        first_name: donation.donaturName,
-        phone: phoneForMidtrans,
-      },
-      item_details: [
-        {
-          id: "donasi_custom",
-          name: "Donasi Spesial",
-          price: Number(donation.donationAmount),
-          quantity: 1,
-        },
-      ],
-      custom_field1: donation.donaturName,
-      custom_field2: donation.phoneNumber,
-      custom_field3: donation.donaturMessage,
-    };
-    
-    console.log("Midtrans parameters:", parameter);
-    const transaction = await snap.createTransaction(parameter);
-    const snapToken = transaction.token;
+    if (!donation) {
+      logDonation("CREATE_FAILED", { error: "Invalid donation data" });
+      return c.json(
+        createResponse("Invalid donation", null, false),
+        HttpStatusCodes.BAD_REQUEST
+      );
+    }
+
+    const validationErrors = validateDonation(donation);
+    if (validationErrors.length > 0) {
+      logDonation("VALIDATION_FAILED", { errors: validationErrors });
+      return c.json(
+        createResponse(validationErrors.join(", "), null, false),
+        HttpStatusCodes.BAD_REQUEST
+      );
+    }
+
+    const orderId = midtransService.generateOrderId();
+    const transactionParams = midtransService.createTransactionParams(
+      orderId,
+      donation.donaturName,
+      donation.phoneNumber,
+      donation.donaturMessage,
+      Number(donation.donationAmount)
+    );
+
+    logDonation("CREATING_TRANSACTION", { orderId, params: transactionParams });
+
+    const transaction = await midtransService.createTransaction(transactionParams);
+
+    logDonation("TRANSACTION_CREATED", { orderId, token: transaction.token });
 
     return c.json(
-      {
-        message: "Donation Created",
-        data: {
-          token: snapToken,
-          redirect: transaction.redirect_url,
-        },
-      },
+      createResponse("Donation Created", {
+        token: transaction.token,
+        redirect: transaction.redirect_url,
+      }),
       HttpStatusCodes.OK
     );
+
   } catch (error) {
-    console.error("Error creating donation:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    logDonation("CREATE_ERROR", { error: errorMessage });
     return c.json(
-      { message: "Error creating donation", data: null },
+      createResponse("Error creating donation", null, false),
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
-
-  //   const sendWAMessage = sendWhatsAppMessage(
-  //     "081241438052",
-  //     `New donation from ${donation.donaturName} with amount ${donation.donationAmount}`
-  //   );
-  //   if (!sendWAMessage) {
-  //     return c.json(
-  //       { message: "Error creating donation", data: null },
-  //       HttpStatusCodes.INTERNAL_SERVER_ERROR
-  //     );
-  //   }
 };
 
 export const midtransCallback: AppRouteHandler<CallbackRoute> = async (c) => {
-  const body = await c.req.json();
-  const transactionStatus = body.transaction_status;
-  const fraudStatus = body.fraud_status;
-  const isSuccess =
-    transactionStatus === "settlement" ||
-    (transactionStatus === "capture" && fraudStatus === "accept");
+  try {
+    const body = await c.req.json();
+    const orderId = body.order_id;
 
-  if (!isSuccess) {
-    return c.json(
-      {
-        message: "Transaksi belum berhasil, tidak disimpan",
-        data: {
-          order_id: body.order_id || "",
-          transaction_status: transactionStatus || "",
-          fraud_status: fraudStatus || "",
+    logDonation("CALLBACK_RECEIVED", body, orderId);
+
+    const isSuccess = midtransService.isTransactionSuccessful(
+      body.transaction_status,
+      body.fraud_status
+    );
+
+    if (!isSuccess) {
+      logDonation("TRANSACTION_NOT_SUCCESS", {
+        status: body.transaction_status,
+        fraud: body.fraud_status,
+      }, orderId);
+
+      return c.json(
+        createResponse("Transaksi belum berhasil, tidak disimpan", {
+          order_id: orderId || "",
+          transaction_status: body.transaction_status || "",
+          fraud_status: body.fraud_status || "",
           status_code: body.status_code || "",
           status_message: body.status_message || "",
-        },
-      },
-      HttpStatusCodes.OK
-    );
-  }
-
-  const orderId = body.order_id;
-  const donaturName = body.custom_field1 || "Hamba Allah.";
-  
-  let phoneNumber = body.custom_field2 || "";
-  if ((!phoneNumber || phoneNumber === "-") && body.customer_details && body.customer_details.phone) {
-    phoneNumber = body.customer_details.phone;
-  }
-
-  phoneNumber = phoneNumber || "-";
-  
-  console.log("Callback phone number:", phoneNumber);
-  
-  const donaturMessage = body.custom_field3 || "-";
-  const donationAmount = body.gross_amount;
-  const donationType = body.payment_type;
-  const donationDeduction = 0;
-  const donation = {
-    donationAmount: String(donationAmount),
-    donationDeduction,
-    donationType,
-    donaturName,
-    phoneNumber,
-    donaturMessage,
-  };
-  
-  console.log("Donation data to be saved:", donation);
-  try {
-    const existingMutation = await db
-      .select()
-      .from(mutations)
-      .where(sql`mutation_description LIKE ${`%${orderId}%`}`)
-      .limit(1);
-    if (existingMutation.length > 0) {
-      return c.json(
-        {
-          message: "Transaksi sudah pernah disimpan",
-          data: {
-            order_id: orderId || "",
-            transaction_status: transactionStatus || "",
-            fraud_status: fraudStatus || "",
-            status_code: body.status_code || "",
-            status_message: body.status_message || "",
-          },
-        },
+        }),
         HttpStatusCodes.OK
       );
     }
 
-    await db.insert(donations).values(donation);
-    await db.insert(mutations).values({
-      mutationType: "Income",
-      mutationAmount: Number(parseFloat(donationAmount)),
-      mutationDescription: `Donation from ${donaturName} (${phoneNumber}) - Order ID: ${orderId}`,
-    });
-  } catch (error) {
-    console.error("Error saving donation:", error);
+    const alreadyExists = await donationService.checkExistingMutation(orderId);
+    if (alreadyExists) {
+      logDonation("DUPLICATE_TRANSACTION", { orderId });
+      return c.json(
+        createResponse("Transaksi sudah pernah disimpan", {
+          order_id: orderId || "",
+          transaction_status: body.transaction_status || "",
+          fraud_status: body.fraud_status || "",
+          status_code: body.status_code || "",
+          status_message: body.status_message || "",
+        }),
+        HttpStatusCodes.OK
+      );
+    }
+
+    const deductionInfo = midtransService.calculateDeduction(body);
+    logDonation("DEDUCTION_CALCULATED", { 
+      ...deductionInfo, 
+      paymentType: body.payment_type,
+      orderId: orderId 
+    }, orderId);
+
+    const donationData = extractDonationFromCallback(body, deductionInfo.finalDeduction);
+    logDonation("DONATION_DATA_EXTRACTED", donationData, orderId);
+
+    await donationService.saveDonation(donationData, orderId, deductionInfo);
+    logDonation("DONATION_SAVED", { orderId, netAmount: deductionInfo.grossAmount - deductionInfo.finalDeduction });
+
     return c.json(
-      {
-        message: "Error saving donation",
-        data: null,
-      },
+      createResponse("Data transaksi berhasil disimpan", {
+        order_id: orderId || "",
+        transaction_status: body.transaction_status || "",
+        fraud_status: body.fraud_status || "",
+        status_code: body.status_code || "",
+        status_message: body.status_message || "",
+      }),
+      HttpStatusCodes.OK
+    );
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    logDonation("CALLBACK_ERROR", { error: errorMessage });
+    return c.json(
+      createResponse("Error saving donation", null, false),
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
-  return c.json(
-    {
-      message: "Data transaksi berhasil disimpan",
-      data: {
-        order_id: orderId || "",
-        transaction_status: transactionStatus || "",
-        fraud_status: fraudStatus || "",
-        status_code: body.status_code || "",
-        status_message: body.status_message || "",
-      },
-    },
-    HttpStatusCodes.OK
-  );
 };
 
 export const get: AppRouteHandler<GetRoute> = async (c) => {
-  const { page, limit } = c.req.valid("query");
-  const offset = (page - 1) * limit;
+  try {
+    const { page, limit } = c.req.valid("query");
+    const result = await donationService.getDonations(page, limit);
 
-  const countResult = await db
-    .select({
-      count: sql`count(*)`.mapWith(Number),
-    })
-    .from(donations);
+    const transformedResult = {
+      ...result,
+      donations: result.donations.map(donation => ({
+        ...donation,
+        createdAt: donation.createdAt.toISOString(),
+        updatedAt: donation.updatedAt.toISOString()
+      }))
+    };
 
-  const total = countResult[0].count;
-  const totalPages = Math.ceil(total / limit);
-
-  const donationsList = await db
-    .select()
-    .from(donations)
-    .orderBy(desc(donations.createdAt))
-    .limit(limit)
-    .offset(offset);
-
-  return c.json(
-    {
-      message: "Donations retrieved",
-      data: {
-        donations: donationsList,
-        pagination: {
-          total,
-          page,
-          limit,
-          totalPages,
-        },
+    return c.json(
+      {
+        message: "Donations retrieved",
+        data: transformedResult,
       },
-    },
-    HttpStatusCodes.OK
-  );
+      HttpStatusCodes.OK
+    );
+
+  } catch (error) {
+    throw error; 
+  }
 };
 
 export const generateExcel: AppRouteHandler<ExcelRoute> = async (c) => {
   try {
-    const donationsList = await db
-      .select()
-      .from(donations)
-      .orderBy(desc(donations.createdAt));
+    const donations = await donationService.getAllDonations();
+    const excelBuffer = excelService.generateDonationsExcel(donations);
+    const filename = excelService.generateFilename("Donations");
 
-    const worksheetData = donationsList.map((donation) => ({
-      ID: donation.donationID,
-      "Donatur Name": donation.donaturName,
-      "Phone Number": donation.phoneNumber || "-",
-      Amount: donation.donationAmount,
-      Type: donation.donationType,
-      Message: donation.donaturMessage || "-",
-      "Created At": donation.createdAt
-        ? new Date(donation.createdAt).toLocaleString()
-        : "-",
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Donations");
-
-    const columnWidths = [
-      { wch: 5 },
-      { wch: 25 },
-      { wch: 30 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 40 },
-      { wch: 20 },
-    ];
-    worksheet["!cols"] = columnWidths;
-
-    const headerStyle = {
-      font: { bold: true, color: { rgb: "FFFFFF" } },
-      fill: { fgColor: { rgb: "4472C4" } },
-      alignment: { horizontal: "center", vertical: "center" },
-    };
-
-    const range = XLSX.utils.decode_range(worksheet["!ref"] || "A1");
-    const tableStyle = {
-      font: { name: "Arial" },
-      border: {
-        top: { style: "thin" },
-        bottom: { style: "thin" },
-        left: { style: "thin" },
-        right: { style: "thin" },
-      },
-      alignment: { vertical: "center", wrapText: true },
-    };
-    for (let R = range.s.r; R <= range.e.r; ++R) {
-      for (let C = range.s.c; C <= range.e.c; ++C) {
-        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-        if (!worksheet[cellAddress]) continue;
-
-        if (R === 0) {
-          worksheet[cellAddress].s = headerStyle;
-        } else {
-          const rowStyle = { ...tableStyle };
-          worksheet[cellAddress].s = rowStyle;
-        }
-      }
-    }
-
-    const excelBuffer = XLSX.write(workbook, {
-      type: "buffer",
-      bookType: "xlsx",
-      bookSST: false,
-    });
-
-    const filename = `Donations_${new Date().toISOString().split("T")[0]}.xlsx`;
     c.header("Content-Disposition", `attachment; filename="${filename}"`);
     c.header(
       "Content-Type",
@@ -321,34 +197,34 @@ export const generateExcel: AppRouteHandler<ExcelRoute> = async (c) => {
     );
 
     return c.body(excelBuffer);
+
   } catch (error) {
-    console.error("Error generating Excel file:", error);
     return c.json(
-      { message: "Error generating Excel file", data: null },
+      createResponse("Error generating Excel file", null, false),
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
 };
 
+
 export const getTopDonations: AppRouteHandler<GetTopDonationsRoute> = async (c) => {
   try {
-    const topDonationsList = await db
-      .select()
-      .from(donations)
-      .orderBy(sql`CAST(${donations.donationAmount} AS NUMERIC) DESC`)
-      .limit(5);
+    const topDonations = await donationService.getTopDonations(5);
+
+    const transformedDonations = topDonations.map(donation => ({
+      ...donation,
+      createdAt: donation.createdAt.toISOString(),
+      updatedAt: donation.updatedAt.toISOString()
+    }));
 
     return c.json(
-      {
-        message: "Top donations retrieved",
-        data: topDonationsList
-      },
+      createResponse("Top donations retrieved", transformedDonations),
       HttpStatusCodes.OK
     );
+
   } catch (error) {
-    console.error("Error retrieving top donations:", error);
     return c.json(
-      { message: "Error retrieving top donations", data: null },
+      createResponse("Error retrieving top donations", null, false),
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
