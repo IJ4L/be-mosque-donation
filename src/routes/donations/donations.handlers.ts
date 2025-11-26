@@ -152,23 +152,17 @@ export const midtransCallback: AppRouteHandler<CallbackRoute> = async (c) => {
       netAmount: deductionInfo.grossAmount - deductionInfo.finalDeduction,
     });
 
-    const res = await sendWhatsAppMessage(
+    sendWhatsAppMessage(
       "082188749035",
       `🕌 Donasi baru dari *${donationData.donaturName}* – Rp ${donationData.donationAmount}.
 Silakan admin meninjau.`
     );
 
-    await sendWhatsAppMessage(
+    sendWhatsAppMessage(
       donationData.phoneNumber,
       `🕌 Terima kasih *${donationData.donaturName}* atas donasinya sebesar Rp ${donationData.donationAmount}.
 Semoga Allah membalas kebaikan Anda.`
     );
-
-    if (res) {
-      logDonation("WHATSAPP_SENT", { orderId });
-    } else {
-      logDonation("WHATSAPP_FAILED", { orderId });
-    }
 
     return c.json(
       createResponse("Data transaksi berhasil disimpan", {
