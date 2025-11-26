@@ -153,19 +153,15 @@ export const midtransCallback: AppRouteHandler<CallbackRoute> = async (c) => {
     });
 
     const res = await sendWhatsAppMessage(
-      "085824416713",
-      `🕌 *Pemberitahuan Donasi Baru*
+      "082188749035",
+      `🕌 Donasi baru dari *${donationData.donaturName}* – Rp ${donationData.donationAmount}.
+Silakan admin meninjau.`
+    );
 
-بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيم
-
-pppppp
-Ada donasi baru yang masuk.
-
-👤 *Nama Donatur:* ${donationData.donaturName}
-💰 *Jumlah:* Rp ${donationData.donationAmount}
-
-Mohon ditinjau oleh admin.
-Semoga Allah memberi keberkahan dalam amanah ini.`
+    await sendWhatsAppMessage(
+      donationData.phoneNumber,
+      `🕌 Terima kasih *${donationData.donaturName}* atas donasinya sebesar Rp ${donationData.donationAmount}.
+Semoga Allah membalas kebaikan Anda.`
     );
 
     if (res) {
