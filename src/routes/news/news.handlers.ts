@@ -1,8 +1,11 @@
 import * as HttpStatusCodes from "stoker/http-status-codes";
-import type { AppRouteHandler } from "../../lib/types.ts";
-import { parseNewsFormData, parseNewsFormDataForUpdate } from "../util/parse-data.ts";
-import type { CreateNewsData } from "./types/news.types.ts";
-import newsService from "./services/news.service.ts";
+import type { AppRouteHandler } from "../../lib/types.js";
+import {
+  parseNewsFormData,
+  parseNewsFormDataForUpdate,
+} from "../util/parse-data.js";
+import type { CreateNewsData } from "./types/news.types.js";
+import newsService from "./services/news.service.js";
 
 import type {
   CreateRoute,
@@ -10,13 +13,13 @@ import type {
   ListRoute,
   PatchRoute,
   RemoveRoute,
-} from "./news.routes.ts";
+} from "./news.routes.js";
 
 import {
   ValidationUtils,
   ResponseUtils,
   TransformUtils,
-} from "./utils/news.utils.ts";
+} from "./utils/news.utils.js";
 
 export const list: AppRouteHandler<ListRoute> = async (c) => {
   try {
@@ -27,7 +30,9 @@ export const list: AppRouteHandler<ListRoute> = async (c) => {
       throw new Error(result.error!);
     }
 
-    const transformedNews = result.data!.news.map(TransformUtils.transformNewsDates);
+    const transformedNews = result.data!.news.map(
+      TransformUtils.transformNewsDates
+    );
 
     return c.json(
       {
@@ -125,7 +130,7 @@ export const patch: AppRouteHandler<PatchRoute> = async (c) => {
   try {
     const { id } = c.req.valid("param");
     const rawUpdateData = await parseNewsFormDataForUpdate(c);
-    
+
     if (!rawUpdateData) {
       return c.json(
         { message: "Invalid request body", data: null },
@@ -173,18 +178,12 @@ export const remove: AppRouteHandler<RemoveRoute> = async (c) => {
     const result = await newsService.deleteNews(id);
     if (!result.success) {
       if (result.error?.includes("tidak ditemukan")) {
-        return c.json(
-          { message: result.error! },
-          HttpStatusCodes.NOT_FOUND
-        );
+        return c.json({ message: result.error! }, HttpStatusCodes.NOT_FOUND);
       }
       throw new Error(result.error!);
     }
 
-    return c.json(
-      { message: "Successfully deleted news" },
-      HttpStatusCodes.OK
-    );
+    return c.json({ message: "Successfully deleted news" }, HttpStatusCodes.OK);
   } catch (error) {
     throw error;
   }

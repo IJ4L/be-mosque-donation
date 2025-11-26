@@ -7,14 +7,17 @@ import type {
   ValidationResult,
   AuthResponse,
   UserWithoutPassword,
-} from "../types/auth.types.ts";
+} from "../types/auth.types.js";
 
 export class PasswordUtils {
   static async hashPassword(password: string): Promise<string> {
     return await bcrypt.hash(password, 10);
   }
 
-  static async comparePassword(password: string, hash: string): Promise<boolean> {
+  static async comparePassword(
+    password: string,
+    hash: string
+  ): Promise<boolean> {
     return await bcrypt.compare(password, hash);
   }
 
@@ -42,7 +45,9 @@ export class PasswordUtils {
 }
 
 export class ValidationUtils {
-  static validateLoginCredentials(credentials: LoginCredentials): ValidationResult {
+  static validateLoginCredentials(
+    credentials: LoginCredentials
+  ): ValidationResult {
     const errors: string[] = [];
 
     if (!credentials.identifier || credentials.identifier.trim() === "") {
@@ -78,7 +83,10 @@ export class ValidationUtils {
       errors.push("Username maksimal 50 karakter");
     }
 
-    if (userData.phoneNumber && !this.isValidPhoneNumber(userData.phoneNumber)) {
+    if (
+      userData.phoneNumber &&
+      !this.isValidPhoneNumber(userData.phoneNumber)
+    ) {
       errors.push("Format nomor telepon tidak valid");
     }
 
@@ -88,10 +96,15 @@ export class ValidationUtils {
     };
   }
 
-  static validatePasswordUpdateData(passwordData: PasswordUpdateData): ValidationResult {
+  static validatePasswordUpdateData(
+    passwordData: PasswordUpdateData
+  ): ValidationResult {
     const errors: string[] = [];
 
-    if (!passwordData.currentPassword || passwordData.currentPassword.trim() === "") {
+    if (
+      !passwordData.currentPassword ||
+      passwordData.currentPassword.trim() === ""
+    ) {
       errors.push("Password saat ini harus diisi");
     }
 
@@ -99,7 +112,9 @@ export class ValidationUtils {
       errors.push("Password baru harus diisi");
     }
 
-    const passwordValidation = PasswordUtils.validatePasswordStrength(passwordData.newPassword);
+    const passwordValidation = PasswordUtils.validatePasswordStrength(
+      passwordData.newPassword
+    );
     if (!passwordValidation.isValid) {
       errors.push(...passwordValidation.errors);
     }
@@ -155,7 +170,9 @@ export class TransformUtils {
     return input.trim();
   }
 
-  static sanitizeLoginCredentials(credentials: LoginCredentials): LoginCredentials {
+  static sanitizeLoginCredentials(
+    credentials: LoginCredentials
+  ): LoginCredentials {
     return {
       identifier: this.sanitizeUserInput(credentials.identifier),
       password: credentials.password, // Don't trim password as it might be intentional

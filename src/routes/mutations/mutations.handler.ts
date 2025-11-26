@@ -1,6 +1,6 @@
 import * as HttpStatusCodes from "stoker/http-status-codes";
 import mutationService from "./services/mutation.service.js";
-import type { AppRouteHandler } from "../../lib/types.ts";
+import type { AppRouteHandler } from "../../lib/types.js";
 
 import type {
   GetRoute,
@@ -8,7 +8,7 @@ import type {
   SummaryRoute,
   PayoutRoute,
   ApprovePayoutRoute,
-} from "./mutations.routes.ts";
+} from "./mutations.routes.js";
 
 import {
   ExcelService,
@@ -142,10 +142,15 @@ export const createPayout: AppRouteHandler<PayoutRoute> = async (c) => {
       );
     }
 
-    const transformedMutation = TransformUtils.transformMutationDates(result.data!);
+    const transformedMutation = TransformUtils.transformMutationDates(
+      result.data!
+    );
 
     return c.json(
-      ResponseUtils.createSuccessResponse("Payout created successfully", transformedMutation),
+      ResponseUtils.createSuccessResponse(
+        "Payout created successfully",
+        transformedMutation
+      ),
       HttpStatusCodes.OK
     );
   } catch (error) {
@@ -181,10 +186,15 @@ export const approvePayout: AppRouteHandler<ApprovePayoutRoute> = async (c) => {
       );
     }
 
-    const transformedMutation = TransformUtils.transformMutationDates(result.data!);
+    const transformedMutation = TransformUtils.transformMutationDates(
+      result.data!
+    );
 
     return c.json(
-      ResponseUtils.createSuccessResponse("Payout approved successfully", transformedMutation),
+      ResponseUtils.createSuccessResponse(
+        "Payout approved successfully",
+        transformedMutation
+      ),
       HttpStatusCodes.OK
     );
   } catch (error) {

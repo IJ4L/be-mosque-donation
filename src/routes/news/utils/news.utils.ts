@@ -2,7 +2,7 @@ import type {
   ParsedNewsData,
   ValidationResult,
   News,
-} from "../types/news.types.ts";
+} from "../types/news.types.js";
 
 export class ValidationUtils {
   static validateCreateNews(newsData: ParsedNewsData): ValidationResult {
@@ -30,7 +30,9 @@ export class ValidationUtils {
     };
   }
 
-  static validateUpdateNews(newsData: Partial<ParsedNewsData>): ValidationResult {
+  static validateUpdateNews(
+    newsData: Partial<ParsedNewsData>
+  ): ValidationResult {
     const errors: string[] = [];
 
     if (newsData.newsName !== undefined) {

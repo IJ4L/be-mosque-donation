@@ -1,5 +1,5 @@
-import db from "../../../db/index.ts";
-import { users } from "../../../db/schema.ts";
+import db from "../../../db/index.js";
+import { users } from "../../../db/schema.js";
 import { eq, sql } from "drizzle-orm";
 
 import type {
@@ -9,11 +9,12 @@ import type {
   PasswordUpdateData,
   ServiceResult,
   DatabaseUser,
-} from "../types/auth.types.ts";
+} from "../types/auth.types.js";
 
 class AuthService {
-
-  async login(credentials: LoginCredentials): Promise<ServiceResult<UserWithoutPassword>> {
+  async login(
+    credentials: LoginCredentials
+  ): Promise<ServiceResult<UserWithoutPassword>> {
     try {
       const { identifier, password } = credentials;
 
@@ -35,7 +36,7 @@ class AuthService {
       const user = userResult[0];
 
       const { password: _, ...userWithoutPassword } = user;
-      
+
       return {
         success: true,
         data: {
@@ -51,7 +52,9 @@ class AuthService {
     }
   }
 
-  async getUserById(userID: number): Promise<ServiceResult<UserWithoutPassword>> {
+  async getUserById(
+    userID: number
+  ): Promise<ServiceResult<UserWithoutPassword>> {
     try {
       const userResult = await db
         .select()
@@ -105,7 +108,10 @@ class AuthService {
     }
   }
 
-  async updateUser(userID: number, updateData: UpdateUserData): Promise<ServiceResult<UserWithoutPassword>> {
+  async updateUser(
+    userID: number,
+    updateData: UpdateUserData
+  ): Promise<ServiceResult<UserWithoutPassword>> {
     try {
       const existingUser = await this.getUserById(userID);
       if (!existingUser.success) {
@@ -130,8 +136,11 @@ class AuthService {
     }
   }
 
-
-  async updatePassword(userID: number, passwordData: PasswordUpdateData, hashedNewPassword: string): Promise<ServiceResult<null>> {
+  async updatePassword(
+    userID: number,
+    passwordData: PasswordUpdateData,
+    hashedNewPassword: string
+  ): Promise<ServiceResult<null>> {
     try {
       const userResult = await db
         .select()
@@ -157,8 +166,11 @@ class AuthService {
       };
     }
   }
-  
-  async saveNewPassword(userID: number, hashedPassword: string): Promise<ServiceResult<null>> {
+
+  async saveNewPassword(
+    userID: number,
+    hashedPassword: string
+  ): Promise<ServiceResult<null>> {
     try {
       await db
         .update(users)
@@ -180,7 +192,10 @@ class AuthService {
     }
   }
 
-  async checkUserExists(username: string, phoneNumber: string): Promise<ServiceResult<boolean>> {
+  async checkUserExists(
+    username: string,
+    phoneNumber: string
+  ): Promise<ServiceResult<boolean>> {
     try {
       const existingUser = await db
         .select()

@@ -1,10 +1,10 @@
 import * as HttpStatusCodes from "stoker/http-status-codes";
-import type { AppRouteHandler } from "../../lib/types.ts";
-import { parseDonationsFormData } from "../util/parse-data.ts";
+import type { AppRouteHandler } from "../../lib/types.js";
+import { parseDonationsFormData } from "../util/parse-data.js";
 
-import midtransService from "./services/midtrans.service.ts";
-import donationService from "./services/donation.service.ts";
-import excelService from "./services/excel.service.ts";
+import midtransService from "./services/midtrans.service.js";
+import donationService from "./services/donation.service.js";
+import excelService from "./services/excel.service.js";
 
 import type {
   CallbackRoute,
@@ -12,8 +12,7 @@ import type {
   ExcelRoute,
   GetRoute,
   GetTopDonationsRoute,
-} from "./donations.routes.ts";
-
+} from "./donations.routes.js";
 
 import {
   sanitizeDonationData,
@@ -21,13 +20,14 @@ import {
   validateDonation,
   createResponse,
   logDonation,
-} from "./utils/donation.utils.ts";
+} from "./utils/donation.utils.js";
+import sendWhatsAppMessage from "../../middlewares/wa-gateway.js";
 
 export const create: AppRouteHandler<CreateRoute> = async (c) => {
   try {
     const rawDonation = await parseDonationsFormData(c);
     const donation = sanitizeDonationData(rawDonation);
-    
+
     if (!donation) {
       logDonation("CREATE_FAILED", { error: "Invalid donation data" });
       return c.json(
@@ -56,7 +56,9 @@ export const create: AppRouteHandler<CreateRoute> = async (c) => {
 
     logDonation("CREATING_TRANSACTION", { orderId, params: transactionParams });
 
-    const transaction = await midtransService.createTransaction(transactionParams);
+    const transaction = await midtransService.createTransaction(
+      transactionParams
+    );
 
     logDonation("TRANSACTION_CREATED", { orderId, token: transaction.token });
 
@@ -67,9 +69,9 @@ export const create: AppRouteHandler<CreateRoute> = async (c) => {
       }),
       HttpStatusCodes.OK
     );
-
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     logDonation("CREATE_ERROR", { error: errorMessage });
     return c.json(
       createResponse("Error creating donation", null, false),
@@ -91,10 +93,14 @@ export const midtransCallback: AppRouteHandler<CallbackRoute> = async (c) => {
     );
 
     if (!isSuccess) {
-      logDonation("TRANSACTION_NOT_SUCCESS", {
-        status: body.transaction_status,
-        fraud: body.fraud_status,
-      }, orderId);
+      logDonation(
+        "TRANSACTION_NOT_SUCCESS",
+        {
+          status: body.transaction_status,
+          fraud: body.fraud_status,
+        },
+        orderId
+      );
 
       return c.json(
         createResponse("Transaksi belum berhasil, tidak disimpan", {
@@ -124,17 +130,49 @@ export const midtransCallback: AppRouteHandler<CallbackRoute> = async (c) => {
     }
 
     const deductionInfo = midtransService.calculateDeduction(body);
-    logDonation("DEDUCTION_CALCULATED", { 
-      ...deductionInfo, 
-      paymentType: body.payment_type,
-      orderId: orderId 
-    }, orderId);
+    logDonation(
+      "DEDUCTION_CALCULATED",
+      {
+        ...deductionInfo,
+        paymentType: body.payment_type,
+        orderId: orderId,
+      },
+      orderId
+    );
 
-    const donationData = extractDonationFromCallback(body, deductionInfo.finalDeduction);
+    const donationData = extractDonationFromCallback(
+      body,
+      deductionInfo.finalDeduction
+    );
     logDonation("DONATION_DATA_EXTRACTED", donationData, orderId);
 
     await donationService.saveDonation(donationData, orderId, deductionInfo);
-    logDonation("DONATION_SAVED", { orderId, netAmount: deductionInfo.grossAmount - deductionInfo.finalDeduction });
+    logDonation("DONATION_SAVED", {
+      orderId,
+      netAmount: deductionInfo.grossAmount - deductionInfo.finalDeduction,
+    });
+
+    const res = await sendWhatsAppMessage(
+      "085824416713",
+      `🕌 *Pemberitahuan Donasi Baru*
+
+بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيم
+
+pppppp
+Ada donasi baru yang masuk.
+
+👤 *Nama Donatur:* ${donationData.donaturName}
+💰 *Jumlah:* Rp ${donationData.donationAmount}
+
+Mohon ditinjau oleh admin.
+Semoga Allah memberi keberkahan dalam amanah ini.`
+    );
+
+    if (res) {
+      logDonation("WHATSAPP_SENT", { orderId });
+    } else {
+      logDonation("WHATSAPP_FAILED", { orderId });
+    }
 
     return c.json(
       createResponse("Data transaksi berhasil disimpan", {
@@ -146,9 +184,9 @@ export const midtransCallback: AppRouteHandler<CallbackRoute> = async (c) => {
       }),
       HttpStatusCodes.OK
     );
-
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     logDonation("CALLBACK_ERROR", { error: errorMessage });
     return c.json(
       createResponse("Error saving donation", null, false),
@@ -164,11 +202,11 @@ export const get: AppRouteHandler<GetRoute> = async (c) => {
 
     const transformedResult = {
       ...result,
-      donations: result.donations.map(donation => ({
+      donations: result.donations.map((donation) => ({
         ...donation,
         createdAt: donation.createdAt.toISOString(),
-        updatedAt: donation.updatedAt.toISOString()
-      }))
+        updatedAt: donation.updatedAt.toISOString(),
+      })),
     };
 
     return c.json(
@@ -178,9 +216,8 @@ export const get: AppRouteHandler<GetRoute> = async (c) => {
       },
       HttpStatusCodes.OK
     );
-
   } catch (error) {
-    throw error; 
+    throw error;
   }
 };
 
@@ -197,7 +234,6 @@ export const generateExcel: AppRouteHandler<ExcelRoute> = async (c) => {
     );
 
     return c.body(excelBuffer);
-
   } catch (error) {
     return c.json(
       createResponse("Error generating Excel file", null, false),
@@ -206,22 +242,22 @@ export const generateExcel: AppRouteHandler<ExcelRoute> = async (c) => {
   }
 };
 
-
-export const getTopDonations: AppRouteHandler<GetTopDonationsRoute> = async (c) => {
+export const getTopDonations: AppRouteHandler<GetTopDonationsRoute> = async (
+  c
+) => {
   try {
     const topDonations = await donationService.getTopDonations(5);
 
-    const transformedDonations = topDonations.map(donation => ({
+    const transformedDonations = topDonations.map((donation) => ({
       ...donation,
       createdAt: donation.createdAt.toISOString(),
-      updatedAt: donation.updatedAt.toISOString()
+      updatedAt: donation.updatedAt.toISOString(),
     }));
 
     return c.json(
       createResponse("Top donations retrieved", transformedDonations),
       HttpStatusCodes.OK
     );
-
   } catch (error) {
     return c.json(
       createResponse("Error retrieving top donations", null, false),
@@ -229,3 +265,4 @@ export const getTopDonations: AppRouteHandler<GetTopDonationsRoute> = async (c) 
     );
   }
 };
+

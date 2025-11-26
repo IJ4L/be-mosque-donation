@@ -1,5 +1,5 @@
-import db from "./index.ts";
-import { donations, mutations, news, users } from "./schema.ts";
+import db from "./index.js";
+import { donations, mutations, news, users } from "./schema.js";
 
 async function clearDatabase() {
   await db.delete(users);
@@ -12,3 +12,4 @@ async function clearDatabase() {
 clearDatabase().catch((err) => {
   process.exit(1);
 });
+

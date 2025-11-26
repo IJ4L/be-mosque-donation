@@ -1,5 +1,5 @@
-import db from "../../../db/index.ts";
-import { news } from "../../../db/schema.ts";
+import db from "../../../db/index.js";
+import { news } from "../../../db/schema.js";
 import { desc, sql, eq } from "drizzle-orm";
 
 import type {
@@ -8,15 +8,23 @@ import type {
   UpdateNewsData,
   ServiceResult,
   NewsResponse,
-} from "../types/news.types.ts";
+} from "../types/news.types.js";
 
 class NewsService {
-  async getNews(page: number, limit: number): Promise<ServiceResult<NewsResponse>> {
+  async getNews(
+    page: number,
+    limit: number
+  ): Promise<ServiceResult<NewsResponse>> {
     try {
       const offset = (page - 1) * limit;
 
       const [newsList, countResult] = await Promise.all([
-        db.select().from(news).offset(offset).limit(limit).orderBy(desc(news.createdAt)),
+        db
+          .select()
+          .from(news)
+          .offset(offset)
+          .limit(limit)
+          .orderBy(desc(news.createdAt)),
         db.select({ count: sql`count(*)` }).from(news),
       ]);
 
@@ -45,7 +53,11 @@ class NewsService {
 
   async getNewsById(newsID: number): Promise<ServiceResult<News>> {
     try {
-      const newsItem = await db.select().from(news).where(eq(news.newsID, newsID)).limit(1);
+      const newsItem = await db
+        .select()
+        .from(news)
+        .where(eq(news.newsID, newsID))
+        .limit(1);
 
       if (newsItem.length === 0) {
         return {
@@ -82,7 +94,10 @@ class NewsService {
     }
   }
 
-  async updateNews(newsID: number, newsData: UpdateNewsData): Promise<ServiceResult<News>> {
+  async updateNews(
+    newsID: number,
+    newsData: UpdateNewsData
+  ): Promise<ServiceResult<News>> {
     try {
       const existingNews = await this.getNewsById(newsID);
       if (!existingNews.success) {
@@ -119,7 +134,10 @@ class NewsService {
         return existingNews;
       }
 
-      const deletedNews = await db.delete(news).where(eq(news.newsID, newsID)).returning();
+      const deletedNews = await db
+        .delete(news)
+        .where(eq(news.newsID, newsID))
+        .returning();
 
       return {
         success: true,

@@ -1,7 +1,7 @@
 import type {
   DonationData,
   MidtransCallbackBody,
-} from "../types/donation.types.ts";
+} from "../types/donation.types.js";
 
 export function sanitizeDonationData(donation: any): DonationData | null {
   if (!donation) return null;
@@ -100,5 +100,5 @@ export function logDonation(action: string, data: any, orderId?: string) {
     timestamp: new Date().toISOString(),
     data,
   };
-
 }
+

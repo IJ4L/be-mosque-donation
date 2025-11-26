@@ -2,7 +2,11 @@ import * as HttpStatusCodes from "stoker/http-status-codes";
 import { createRoute, z } from "@hono/zod-openapi";
 import { jsonContent, jsonContentRequired } from "stoker/openapi/helpers";
 import { createErrorSchema, IdParamsSchema } from "stoker/openapi/schemas";
-import {insertNewsSchema, patchNewsSchema,selectNewsSchema,} from "../../db/schema.ts";
+import {
+  insertNewsSchema,
+  patchNewsSchema,
+  selectNewsSchema,
+} from "../../db/schema.js";
 
 const tags = ["News"];
 

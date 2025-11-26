@@ -7,7 +7,9 @@
     "migrate": "tsx src/db/migrate.ts",
     "studio": "drizzle-kit studio",
     "seed-admin": "tsx src/db/seed-admin.ts",
-    "reset-admin": "tsx src/db/reset-admin.ts"
+    "reset-admin": "tsx src/db/reset-admin.ts",
+    "start": "node dist/index.js",
+    "build": "tsc"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.8",

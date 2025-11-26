@@ -1,11 +1,11 @@
 import pg from "pg";
-import env from "../env.ts";
+import env from "../env.js";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 
 async function main() {
   console.log("Starting database migration...");
-  
+
   const pool = new pg.Pool({
     connectionString: env.DATABASE_URL,
   });

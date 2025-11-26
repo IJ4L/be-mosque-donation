@@ -1,7 +1,7 @@
-import { createRouter } from "../../lib/create-app.ts";
+import { createRouter } from "../../lib/create-app.js";
 
-import * as routes from "./image.routes.ts";
-import * as handlers from "./image.handlers.ts";
+import * as routes from "./image.routes.js";
+import * as handlers from "./image.handlers.js";
 
 const router = createRouter().openapi(routes.get, handlers.getImage);
 

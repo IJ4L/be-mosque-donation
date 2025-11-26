@@ -1,7 +1,11 @@
-import db from "../../../db/index.ts";
-import { donations, mutations } from "../../../db/schema.ts";
+import db from "../../../db/index.js";
+import { donations, mutations } from "../../../db/schema.js";
 import { desc, sql } from "drizzle-orm";
-import type { DonationData, MidtransCallbackBody, DeductionCalculation } from "../types/donation.types.ts";
+import type {
+  DonationData,
+  MidtransCallbackBody,
+  DeductionCalculation,
+} from "../types/donation.types.js";
 
 class DonationService {
   async saveDonation(
@@ -11,7 +15,8 @@ class DonationService {
   ): Promise<void> {
     try {
       await db.insert(donations).values(donationData);
-      const netAmount = deductionInfo.grossAmount - deductionInfo.finalDeduction;
+      const netAmount =
+        deductionInfo.grossAmount - deductionInfo.finalDeduction;
       await db.insert(mutations).values({
         mutationType: "Income",
         mutationAmount: Number(netAmount),

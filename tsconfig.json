@@ -1,20 +1,23 @@
 {
-    "compilerOptions": {
-        "allowImportingTsExtensions": true,
-        "noEmit": true,
-        "target": "ESNext",
-        "module": "NodeNext",
-        "strict": true,
-        "verbatimModuleSyntax": true,
-        "skipLibCheck": true,
-        "types": [
-            "node"
-        ],
-        "typeRoots": [
-            "node_modules/@types",
-            "src/types"
-        ],
-        "jsx": "react-jsx",
-        "jsxImportSource": "hono/jsx",
-    }
+  "compilerOptions": {
+    "noEmit": false,
+    "target": "ESNext",
+    "module": "NodeNext",
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "types": [
+      "node"
+    ],
+    "typeRoots": [
+      "node_modules/@types",
+      "src/types"
+    ],
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+    "outDir": "./dist"
+  },
+  "include": [
+    "src"
+  ]
 }
