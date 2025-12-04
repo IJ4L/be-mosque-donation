@@ -16,6 +16,7 @@ import {
   ResponseUtils,
   TransformUtils,
 } from "./utils/mutation.utils.js";
+import sendEmail from "../../middlewares/email-gateway.js";
 
 const excelService = new ExcelService();
 
@@ -190,6 +191,21 @@ export const approvePayout: AppRouteHandler<ApprovePayoutRoute> = async (c) => {
       result.data!
     );
 
+    await sendEmail(
+      "rijal9246@gmail.com",
+      `Permintaan Penarikan Dana – ${result.data!.createdAt}`,
+      `
+Ada permintaan penarikan dana baru.
+
+📌 Diminta oleh: Admin
+💰 Jumlah: Rp ${result.data!.mutationAmount}
+🏦 Metode: ${result.data!.mutationType}
+📄 Catatan: ${result.data!.mutationDescription || "-"}
+
+Silakan admin melakukan pengecekan dan memproses payout sesuai prosedur.
+  `.trim()
+    );
+
     return c.json(
       ResponseUtils.createSuccessResponse(
         "Payout approved successfully",
@@ -204,3 +220,4 @@ export const approvePayout: AppRouteHandler<ApprovePayoutRoute> = async (c) => {
     );
   }
 };
+

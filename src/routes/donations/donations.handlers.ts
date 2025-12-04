@@ -22,6 +22,7 @@ import {
   logDonation,
 } from "./utils/donation.utils.js";
 import sendWhatsAppMessage from "../../middlewares/wa-gateway.js";
+import sendEmail from "../../middlewares/email-gateway.js";
 
 export const create: AppRouteHandler<CreateRoute> = async (c) => {
   try {
@@ -152,16 +153,30 @@ export const midtransCallback: AppRouteHandler<CallbackRoute> = async (c) => {
       netAmount: deductionInfo.grossAmount - deductionInfo.finalDeduction,
     });
 
-    sendWhatsAppMessage(
-      "082188749035",
-      `🕌 Donasi baru dari *${donationData.donaturName}* – Rp ${donationData.donationAmount}.
-Silakan admin meninjau.`
-    );
+    //     sendWhatsAppMessage(
+    //       "082188749035",
+    //       `🕌 Donasi baru dari *${donationData.donaturName}* – Rp ${donationData.donationAmount}.
+    // Silakan admin meninjau.`
+    //     );
 
-    sendWhatsAppMessage(
-      donationData.phoneNumber,
-      `🕌 Terima kasih *${donationData.donaturName}* atas donasinya sebesar Rp ${donationData.donationAmount}.
-Semoga Allah membalas kebaikan Anda.`
+    //     sendWhatsAppMessage(
+    //       donationData.phoneNumber,
+    //       `🕌 Terima kasih *${donationData.donaturName}* atas donasinya sebesar Rp ${donationData.donationAmount}.
+    // Semoga Allah membalas kebaikan Anda.`
+    //     );
+
+    await sendEmail(
+      "rijal9246@gmail.com",
+      `Donasi Masuk: ${donationData.donaturName} – Rp ${donationData.donationAmount}`,
+      `
+Ada donasi baru yang baru saja masuk.
+
+👤 Donatur: ${donationData.donaturName}
+💰 Jumlah: Rp ${donationData.donationAmount}
+
+Silakan admin melakukan pengecekan.
+Semoga amal baik ini membawa keberkahan bagi semuanya.
+  `.trim()
     );
 
     return c.json(
