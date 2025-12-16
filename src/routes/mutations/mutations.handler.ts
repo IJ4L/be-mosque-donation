@@ -16,7 +16,7 @@ import {
   ResponseUtils,
   TransformUtils,
 } from "./utils/mutation.utils.js";
-import sendEmail from "../../middlewares/email-gateway.js";
+import sendTelegram from "../../middlewares/telegram-gateway.js";
 
 const excelService = new ExcelService();
 
@@ -191,19 +191,31 @@ export const approvePayout: AppRouteHandler<ApprovePayoutRoute> = async (c) => {
       result.data!
     );
 
-    await sendEmail(
-      "rijal9246@gmail.com",
-      `Permintaan Penarikan Dana – ${result.data!.createdAt}`,
-      `
-Ada permintaan penarikan dana baru.
+    //     await sendEmail(
+    //       "rijal9246@gmail.com",
+    //       `Permintaan Penarikan Dana – ${result.data!.createdAt}`,
+    //       `
+    // Ada permintaan penarikan dana baru.
 
-📌 Diminta oleh: Admin
-💰 Jumlah: Rp ${result.data!.mutationAmount}
-🏦 Metode: ${result.data!.mutationType}
-📄 Catatan: ${result.data!.mutationDescription || "-"}
+    // 📌 Diminta oleh: Admin
+    // 💰 Jumlah: Rp ${result.data!.mutationAmount}
+    // 🏦 Metode: ${result.data!.mutationType}
+    // 📄 Catatan: ${result.data!.mutationDescription || "-"}
 
-Silakan admin melakukan pengecekan dan memproses payout sesuai prosedur.
-  `.trim()
+    // Silakan admin melakukan pengecekan dan memproses payout sesuai prosedur.
+    //   `.trim()
+    //     );
+
+    await sendTelegram(
+      "-1003627073655",
+      `<b>Permintaan Penarikan Dana</b>
+
+📌 <b>Diminta oleh:</b> Admin
+💰 <b>Jumlah:</b> Rp ${result.data!.mutationAmount}
+🏦 <b>Metode:</b> ${result.data!.mutationType}
+📄 <b>Catatan:</b> ${result.data!.mutationDescription || "-"}
+
+Silakan admin melakukan pengecekan dan memproses payout sesuai prosedur.`
     );
 
     return c.json(

@@ -23,6 +23,8 @@ import {
 } from "./utils/donation.utils.js";
 import sendWhatsAppMessage from "../../middlewares/wa-gateway.js";
 import sendEmail from "../../middlewares/email-gateway.js";
+import sendTelegram from "../../middlewares/telegram-gateway.js";
+import { send } from "process";
 
 export const create: AppRouteHandler<CreateRoute> = async (c) => {
   try {
@@ -165,18 +167,29 @@ export const midtransCallback: AppRouteHandler<CallbackRoute> = async (c) => {
     // Semoga Allah membalas kebaikan Anda.`
     //     );
 
-    await sendEmail(
-      "rijal9246@gmail.com",
-      `Donasi Masuk: ${donationData.donaturName} – Rp ${donationData.donationAmount}`,
-      `
-Ada donasi baru yang baru saja masuk.
+    //     await sendEmail(
+    //       "rijal9246@gmail.com",
+    //       `Donasi Masuk: ${donationData.donaturName} – Rp ${donationData.donationAmount}`,
+    //       `
+    // Ada donasi baru yang baru saja masuk.
 
-👤 Donatur: ${donationData.donaturName}
-💰 Jumlah: Rp ${donationData.donationAmount}
+    // 👤 Donatur: ${donationData.donaturName}
+    // 💰 Jumlah: Rp ${donationData.donationAmount}
+
+    // Silakan admin melakukan pengecekan.
+    // Semoga amal baik ini membawa keberkahan bagi semuanya.
+    //   `.trim()
+    //     );
+
+    await sendTelegram(
+      "-1003627073655",
+      `<b>Donasi Masuk</b>
+
+👤 <b>Donatur:</b> ${donationData.donaturName}
+💰 <b>Jumlah:</b> Rp ${donationData.donationAmount}
 
 Silakan admin melakukan pengecekan.
-Semoga amal baik ini membawa keberkahan bagi semuanya.
-  `.trim()
+Semoga amal baik ini membawa keberkahan bagi semuanya.`
     );
 
     return c.json(

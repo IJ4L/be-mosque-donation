@@ -1,7 +1,7 @@
 import * as HttpStatusCodes from "stoker/http-status-codes";
 import mutationService from "./services/mutation.service.js";
 import { ExcelService, ValidationUtils, ResponseUtils, TransformUtils, } from "./utils/mutation.utils.js";
-import sendEmail from "../../middlewares/email-gateway.js";
+import sendTelegram from "../../middlewares/telegram-gateway.js";
 const excelService = new ExcelService();
 export const get = async (c) => {
     try {
@@ -96,16 +96,26 @@ export const approvePayout = async (c) => {
             return c.json(ResponseUtils.createErrorResponse(result.error), statusCode);
         }
         const transformedMutation = TransformUtils.transformMutationDates(result.data);
-        await sendEmail("rijal9246@gmail.com", `Permintaan Penarikan Dana – ${result.data.createdAt}`, `
-Ada permintaan penarikan dana baru.
+        //     await sendEmail(
+        //       "rijal9246@gmail.com",
+        //       `Permintaan Penarikan Dana – ${result.data!.createdAt}`,
+        //       `
+        // Ada permintaan penarikan dana baru.
+        // 📌 Diminta oleh: Admin
+        // 💰 Jumlah: Rp ${result.data!.mutationAmount}
+        // 🏦 Metode: ${result.data!.mutationType}
+        // 📄 Catatan: ${result.data!.mutationDescription || "-"}
+        // Silakan admin melakukan pengecekan dan memproses payout sesuai prosedur.
+        //   `.trim()
+        //     );
+        await sendTelegram("-1003627073655", `<b>Permintaan Penarikan Dana</b>
 
-📌 Diminta oleh: Admin
-💰 Jumlah: Rp ${result.data.mutationAmount}
-🏦 Metode: ${result.data.mutationType}
-📄 Catatan: ${result.data.mutationDescription || "-"}
+📌 <b>Diminta oleh:</b> Admin
+💰 <b>Jumlah:</b> Rp ${result.data.mutationAmount}
+🏦 <b>Metode:</b> ${result.data.mutationType}
+📄 <b>Catatan:</b> ${result.data.mutationDescription || "-"}
 
-Silakan admin melakukan pengecekan dan memproses payout sesuai prosedur.
-  `.trim());
+Silakan admin melakukan pengecekan dan memproses payout sesuai prosedur.`);
         return c.json(ResponseUtils.createSuccessResponse("Payout approved successfully", transformedMutation), HttpStatusCodes.OK);
     }
     catch (error) {

@@ -6,6 +6,8 @@ import excelService from "./services/excel.service.js";
 import { sanitizeDonationData, extractDonationFromCallback, validateDonation, createResponse, logDonation, } from "./utils/donation.utils.js";
 import sendWhatsAppMessage from "../../middlewares/wa-gateway.js";
 import sendEmail from "../../middlewares/email-gateway.js";
+import sendTelegram from "../../middlewares/telegram-gateway.js";
+import { send } from "process";
 export const create = async (c) => {
     try {
         const rawDonation = await parseDonationsFormData(c);
@@ -88,15 +90,24 @@ export const midtransCallback = async (c) => {
         //       `🕌 Terima kasih *${donationData.donaturName}* atas donasinya sebesar Rp ${donationData.donationAmount}.
         // Semoga Allah membalas kebaikan Anda.`
         //     );
-        await sendEmail("rijal9246@gmail.com", `Donasi Masuk: ${donationData.donaturName} – Rp ${donationData.donationAmount}`, `
-Ada donasi baru yang baru saja masuk.
+        //     await sendEmail(
+        //       "rijal9246@gmail.com",
+        //       `Donasi Masuk: ${donationData.donaturName} – Rp ${donationData.donationAmount}`,
+        //       `
+        // Ada donasi baru yang baru saja masuk.
+        // 👤 Donatur: ${donationData.donaturName}
+        // 💰 Jumlah: Rp ${donationData.donationAmount}
+        // Silakan admin melakukan pengecekan.
+        // Semoga amal baik ini membawa keberkahan bagi semuanya.
+        //   `.trim()
+        //     );
+        await sendTelegram("-1003627073655", `<b>Donasi Masuk</b>
 
-👤 Donatur: ${donationData.donaturName}
-💰 Jumlah: Rp ${donationData.donationAmount}
+👤 <b>Donatur:</b> ${donationData.donaturName}
+💰 <b>Jumlah:</b> Rp ${donationData.donationAmount}
 
 Silakan admin melakukan pengecekan.
-Semoga amal baik ini membawa keberkahan bagi semuanya.
-  `.trim());
+Semoga amal baik ini membawa keberkahan bagi semuanya.`);
         return c.json(createResponse("Data transaksi berhasil disimpan", {
             order_id: orderId || "",
             transaction_status: body.transaction_status || "",
