@@ -21,10 +21,7 @@ import {
   createResponse,
   logDonation,
 } from "./utils/donation.utils.js";
-import sendWhatsAppMessage from "../../middlewares/wa-gateway.js";
-import sendEmail from "../../middlewares/email-gateway.js";
 import sendTelegram from "../../middlewares/telegram-gateway.js";
-import { send } from "process";
 
 export const create: AppRouteHandler<CreateRoute> = async (c) => {
   try {
