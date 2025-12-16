@@ -21,7 +21,7 @@ export const create = createRoute({
             message: z.string(),
             data: z.null(),
         }), "Error creating donation"),
-    }
+    },
 });
 export const callback = createRoute({
     method: "post",
@@ -45,7 +45,7 @@ export const callback = createRoute({
             message: z.string(),
             data: z.null(),
         }), "Error processing callback"),
-    }
+    },
 });
 export const get = createRoute({
     method: "get",
@@ -53,8 +53,8 @@ export const get = createRoute({
     request: {
         query: z.object({
             page: z.coerce.number().int().positive().default(1),
-            limit: z.coerce.number().int().positive().default(10)
-        })
+            limit: z.coerce.number().int().positive().default(10),
+        }),
     },
     responses: {
         [HttpStatusCodes.OK]: jsonContent(z.object({
@@ -65,11 +65,11 @@ export const get = createRoute({
                     total: z.number(),
                     page: z.number(),
                     limit: z.number(),
-                    totalPages: z.number()
-                })
+                    totalPages: z.number(),
+                }),
             }),
         }), "Donations retrieved"),
-    }
+    },
 });
 export const excel = createRoute({
     method: "get",
@@ -79,15 +79,15 @@ export const excel = createRoute({
             description: "Excel file with all donations",
             content: {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
-                    schema: { type: "string", format: "binary" }
-                }
-            }
+                    schema: { type: "string", format: "binary" },
+                },
+            },
         },
         [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(z.object({
             message: z.string(),
             data: z.null(),
         }), "Error generating Excel file"),
-    }
+    },
 });
 export const getTopDonations = createRoute({
     method: "get",
@@ -101,5 +101,5 @@ export const getTopDonations = createRoute({
             message: z.string(),
             data: z.null(),
         }), "Error retrieving top donations"),
-    }
+    },
 });

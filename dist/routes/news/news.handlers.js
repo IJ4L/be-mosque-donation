@@ -1,5 +1,5 @@
 import * as HttpStatusCodes from "stoker/http-status-codes";
-import { parseNewsFormData, parseNewsFormDataForUpdate } from "../util/parse-data.js";
+import { parseNewsFormData, parseNewsFormDataForUpdate, } from "../util/parse-data.js";
 import newsService from "./services/news.service.js";
 import { ValidationUtils, ResponseUtils, TransformUtils, } from "./utils/news.utils.js";
 export const list = async (c) => {

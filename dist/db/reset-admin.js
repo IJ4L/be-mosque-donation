@@ -9,7 +9,7 @@ async function resetAdmin() {
             username: "admin",
             phoneNumber: "123456",
             password: await bcrypt.hash("admin123", 10),
-            updatedAt: new Date()
+            updatedAt: new Date(),
         };
         await db.insert(users).values(adminUser);
         console.log("Admin user has been reset successfully!");

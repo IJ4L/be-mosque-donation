@@ -10,12 +10,14 @@ export const login = createRoute({
             content: {
                 "application/json": {
                     schema: z.object({
-                        identifier: z.string().min(1, "Username or phone number is required"),
-                        password: z.string().min(1, "Password is required")
-                    })
-                }
-            }
-        }
+                        identifier: z
+                            .string()
+                            .min(1, "Username or phone number is required"),
+                        password: z.string().min(1, "Password is required"),
+                    }),
+                },
+            },
+        },
     },
     responses: {
         [HttpStatusCodes.OK]: jsonContent(z.object({
@@ -34,7 +36,7 @@ export const login = createRoute({
             message: z.string(),
             data: z.null(),
         }), "Server error"),
-    }
+    },
 });
 export const updateUser = createRoute({
     method: "put",
@@ -42,16 +44,17 @@ export const updateUser = createRoute({
     request: {
         params: z.object({
             userID: z.string(),
-        }), body: {
+        }),
+        body: {
             content: {
                 "application/json": {
                     schema: z.object({
                         username: z.string().min(1, "Username is required"),
-                        phoneNumber: z.string().min(1, "Phone number is required")
-                    })
-                }
-            }
-        }
+                        phoneNumber: z.string().min(1, "Phone number is required"),
+                    }),
+                },
+            },
+        },
     },
     responses: {
         [HttpStatusCodes.OK]: jsonContent(z.object({
@@ -70,7 +73,7 @@ export const updateUser = createRoute({
             message: z.string(),
             data: z.null(),
         }), "Server error"),
-    }
+    },
 });
 export const getUser = createRoute({
     method: "get",
@@ -88,7 +91,7 @@ export const getUser = createRoute({
             message: z.string(),
             data: z.null(),
         }), "Server error"),
-    }
+    },
 });
 export const updatePassword = createRoute({
     method: "put",
@@ -102,11 +105,13 @@ export const updatePassword = createRoute({
                 "application/json": {
                     schema: z.object({
                         currentPassword: z.string().min(1, "Current password is required"),
-                        newPassword: z.string().min(6, "New password must be at least 6 characters"),
-                    })
-                }
-            }
-        }
+                        newPassword: z
+                            .string()
+                            .min(6, "New password must be at least 6 characters"),
+                    }),
+                },
+            },
+        },
     },
     responses: {
         [HttpStatusCodes.OK]: jsonContent(z.object({
@@ -129,5 +134,5 @@ export const updatePassword = createRoute({
             message: z.string(),
             data: z.null(),
         }), "Server error"),
-    }
+    },
 });

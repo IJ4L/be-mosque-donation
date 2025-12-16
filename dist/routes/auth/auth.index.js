@@ -1,6 +1,6 @@
-import * as Routes from './auth.routes.js';
-import * as Handlers from './auth.handlers.js';
-import { createRouter } from '../../lib/create-app.js';
+import * as Routes from "./auth.routes.js";
+import * as Handlers from "./auth.handlers.js";
+import { createRouter } from "../../lib/create-app.js";
 const router = createRouter()
     .openapi(Routes.login, Handlers.login)
     .openapi(Routes.updateUser, Handlers.updateUser)

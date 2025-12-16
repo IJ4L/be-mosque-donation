@@ -6,7 +6,12 @@ class NewsService {
         try {
             const offset = (page - 1) * limit;
             const [newsList, countResult] = await Promise.all([
-                db.select().from(news).offset(offset).limit(limit).orderBy(desc(news.createdAt)),
+                db
+                    .select()
+                    .from(news)
+                    .offset(offset)
+                    .limit(limit)
+                    .orderBy(desc(news.createdAt)),
                 db.select({ count: sql `count(*)` }).from(news),
             ]);
             const total = Number(countResult[0]?.count || 0);
@@ -33,7 +38,11 @@ class NewsService {
     }
     async getNewsById(newsID) {
         try {
-            const newsItem = await db.select().from(news).where(eq(news.newsID, newsID)).limit(1);
+            const newsItem = await db
+                .select()
+                .from(news)
+                .where(eq(news.newsID, newsID))
+                .limit(1);
             if (newsItem.length === 0) {
                 return {
                     success: false,
@@ -100,7 +109,10 @@ class NewsService {
             if (!existingNews.success) {
                 return existingNews;
             }
-            const deletedNews = await db.delete(news).where(eq(news.newsID, newsID)).returning();
+            const deletedNews = await db
+                .delete(news)
+                .where(eq(news.newsID, newsID))
+                .returning();
             return {
                 success: true,
                 data: deletedNews[0],

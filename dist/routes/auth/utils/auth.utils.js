@@ -52,7 +52,8 @@ export class ValidationUtils {
         if (userData.username && userData.username.length > 50) {
             errors.push("Username maksimal 50 karakter");
         }
-        if (userData.phoneNumber && !this.isValidPhoneNumber(userData.phoneNumber)) {
+        if (userData.phoneNumber &&
+            !this.isValidPhoneNumber(userData.phoneNumber)) {
             errors.push("Format nomor telepon tidak valid");
         }
         return {
@@ -62,7 +63,8 @@ export class ValidationUtils {
     }
     static validatePasswordUpdateData(passwordData) {
         const errors = [];
-        if (!passwordData.currentPassword || passwordData.currentPassword.trim() === "") {
+        if (!passwordData.currentPassword ||
+            passwordData.currentPassword.trim() === "") {
             errors.push("Password saat ini harus diisi");
         }
         if (!passwordData.newPassword || passwordData.newPassword.trim() === "") {

@@ -7,7 +7,7 @@ const sendWhatsAppMessage = async (phone, message) => {
         const response = await fetch(env.WABLAS_DOMAIN + "/api/send-message", {
             method: "POST",
             headers: {
-                "Authorization": env.WABLAS_TOKEN + "." + env.WABLAS_SECRET,
+                Authorization: env.WABLAS_TOKEN + "." + env.WABLAS_SECRET,
             },
             body: formData,
         });

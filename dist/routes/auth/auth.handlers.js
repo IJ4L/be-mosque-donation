@@ -21,7 +21,7 @@ export const login = async (c) => {
         const { userPassword, ...userWithoutPassword } = user;
         const transformedUser = {
             ...userWithoutPassword,
-            updatedAt: userWithoutPassword.updatedAt.toISOString()
+            updatedAt: userWithoutPassword.updatedAt.toISOString(),
         };
         return c.json({
             message: "Login berhasil",
@@ -50,7 +50,7 @@ export const updateUser = async (c) => {
         }
         const transformedUser = {
             ...updateResult.data,
-            updatedAt: updateResult.data.updatedAt.toISOString()
+            updatedAt: updateResult.data.updatedAt.toISOString(),
         };
         return c.json({
             message: "Data user berhasil diperbarui",
@@ -69,7 +69,7 @@ export const getUser = async (c) => {
         }
         const transformedUser = {
             ...userResult.data,
-            updatedAt: userResult.data.updatedAt.toISOString()
+            updatedAt: userResult.data.updatedAt.toISOString(),
         };
         return c.json({
             message: "Data user berhasil diambil",
